@@ -1,0 +1,16 @@
+[Unit]
+Description=Download Station torrent web UI
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/torrent-webui
+Environment=PORT=8080
+Environment=HOST=0.0.0.0
+ExecStart=/opt/torrent-webui/venv/bin/python /opt/torrent-webui/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

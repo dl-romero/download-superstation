@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Station</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">DS</div>
+      <span class="app-name">Download Station</span>
+    </div>
+    <div class="spacer"></div>
+    <button class="hdr-btn" title="Settings" onclick="alert('Settings coming soon')">⚙</button>
+  </header>
+
+  <!-- ── Body ── -->
+  <div class="body-row">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Tasks</div>
+        <div class="sidebar-item active" data-cat="all">
+          <span class="si-icon">☰</span>
+          <span class="si-label">All Tasks</span>
+          <span class="si-count">0</span>
+        </div>
+        <div class="sidebar-item" data-cat="downloading">
+          <span class="si-icon">↓</span>
+          <span class="si-label">Downloading</span>
+          <span class="si-count">0</span>
+        </div>
+        <div class="sidebar-item" data-cat="seeding">
+          <span class="si-icon">↑</span>
+          <span class="si-label">Seeding</span>
+          <span class="si-count">0</span>
+        </div>
+        <div class="sidebar-item" data-cat="finished">
+          <span class="si-icon">✓</span>
+          <span class="si-label">Completed</span>
+          <span class="si-count">0</span>
+        </div>
+        <div class="sidebar-item" data-cat="paused">
+          <span class="si-icon">⏸</span>
+          <span class="si-label">Paused</span>
+          <span class="si-count">0</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button class="btn primary" id="btn-add">
+          <span class="icon">+</span> Add
+        </button>
+        <div class="sep"></div>
+        <button class="btn" id="btn-resume" disabled>
+          <span class="icon">▶</span> Resume
+        </button>
+        <button class="btn" id="btn-pause" disabled>
+          <span class="icon">⏸</span> Pause
+        </button>
+        <div class="sep"></div>
+        <button class="btn danger" id="btn-delete" disabled>
+          <span class="icon">✕</span> Delete
+        </button>
+        <div class="spacer"></div>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="Search…">
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all"></th>
+              <th data-sort="name">Name</th>
+              <th data-sort="priority">Priority</th>
+              <th data-sort="size">Size</th>
+              <th data-sort="state">Status</th>
+              <th data-sort="progress">Progress</th>
+              <th data-sort="download_speed">↓ Speed</th>
+              <th data-sort="upload_speed">↑ Speed</th>
+              <th data-sort="ratio">Ratio</th>
+              <th data-sort="eta">ETA</th>
+            </tr>
+          </thead>
+          <tbody id="torrent-tbody">
+            <tr class="no-data"><td colspan="10">No torrents — click Add to get started</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Status bar ── -->
+  <div class="statusbar">
+    <div class="stat">
+      <span class="stat-icon">↓</span>
+      <span id="stat-dl">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-icon">↑</span>
+      <span id="stat-ul">—</span>
+    </div>
+    <div class="stat">
+      Tasks: <span id="stat-count">0</span>
+    </div>
+  </div>
+
+</div><!-- .layout -->
+
+
+<!-- ── Add Torrent Modal ── -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Torrent</h2>
+      <button class="modal-close" onclick="closeAddModal()">×</button>
+    </div>
+
+    <div class="modal-tabs">
+      <div class="modal-tab active" data-tab="file">Torrent File</div>
+      <div class="modal-tab" data-tab="magnet">Magnet Link</div>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- File tab -->
+      <div class="tab-pane active" id="tab-file">
+        <div class="file-drop" id="drop-zone">
+          <div class="drop-icon">📂</div>
+          <div class="drop-text" id="drop-label">Drop .torrent file here or click to browse</div>
+          <div class="drop-sub" id="drop-sub">.torrent files only</div>
+          <input type="file" id="file-input" accept=".torrent">
+        </div>
+        <div class="selected-file" id="selected-file-name"></div>
+        <div>
+          <label class="field-label" for="save-path-file">Save to (optional)</label>
+          <input class="field-input" type="text" id="save-path-file" placeholder="Default download directory">
+        </div>
+      </div>
+
+      <!-- Magnet tab -->
+      <div class="tab-pane" id="tab-magnet">
+        <div>
+          <label class="field-label" for="magnet-input">Magnet Link</label>
+          <input class="field-input" type="text" id="magnet-input" placeholder="magnet:?xt=urn:btih:…">
+        </div>
+        <div>
+          <label class="field-label" for="save-path-magnet">Save to (optional)</label>
+          <input class="field-input" type="text" id="save-path-magnet" placeholder="Default download directory">
+        </div>
+      </div>
+
+      <div class="error-msg" id="add-error"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeAddModal()">Cancel</button>
+      <button class="btn primary" id="btn-submit-add">Add</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Context Menu ── -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-item" id="ctx-resume">▶ Resume</div>
+  <div class="ctx-item" id="ctx-pause">⏸ Pause</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-prio-high">▲ High Priority</div>
+  <div class="ctx-item" id="ctx-prio-normal">→ Normal Priority</div>
+  <div class="ctx-item" id="ctx-prio-low">▼ Low Priority</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-files">📄 File Priorities…</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete">✕ Remove</div>
+  <div class="ctx-item danger" id="ctx-delete-files">🗑 Remove + Delete Files</div>
+</div>
+
+
+<!-- ── File Priority Modal ── -->
+<div class="modal-overlay" id="file-modal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2 id="file-modal-title">File Priorities</h2>
+      <button class="modal-close" onclick="closeFileModal()">×</button>
+    </div>
+    <div class="file-modal-body">
+      <div class="file-modal-toolbar">
+        <span class="file-modal-hint">Set priority per file — <em>Skip</em> to not download a file.</span>
+        <div class="file-modal-actions">
+          <button class="btn" onclick="setAllFilePriority('high')">All High</button>
+          <button class="btn" onclick="setAllFilePriority('normal')">All Normal</button>
+          <button class="btn" onclick="setAllFilePriority('skip')">Skip All</button>
+        </div>
+      </div>
+      <div class="file-list" id="file-list">
+        <div class="file-loading">Loading…</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeFileModal()">Cancel</button>
+      <button class="btn primary" id="btn-apply-files">Apply</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
