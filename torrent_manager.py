@@ -15,8 +15,14 @@ def _s(value) -> str:
 
 class TorrentManager:
     _STATE_LABELS = [
-        'Checking', 'Fetching Metadata', 'Downloading',
-        'Finished', 'Seeding', 'Allocating', 'Checking',
+        'Queued',            # 0 queued_for_checking
+        'Checking',          # 1 checking_files
+        'Fetching Metadata', # 2 downloading_metadata
+        'Downloading',       # 3 downloading
+        'Finished',          # 4 finished (all selected pieces done)
+        'Seeding',           # 5 seeding
+        'Allocating',        # 6 allocating
+        'Checking',          # 7 checking_resume_data
     ]
 
     # Per-torrent queue priority (affects download order between torrents)
@@ -246,7 +252,7 @@ class TorrentManager:
             if not h.is_valid():
                 continue
             st = h.status()
-            if int(st.state) != 4 or st.paused:
+            if int(st.state) not in (4, 5) or st.paused:
                 continue
             if ratio_limit > 0 and st.all_time_download > 0:
                 if (st.all_time_upload / st.all_time_download) >= ratio_limit:
