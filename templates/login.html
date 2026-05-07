@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in — Download Station</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-icon logo-icon-lg">DS</div>
+        <div class="login-title">Download Station</div>
+        <div class="login-sub">Sign in to continue</div>
+      </div>
+      <form class="login-form" id="login-form" autocomplete="on">
+        <div>
+          <label class="field-label" for="login-user">Username</label>
+          <input class="field-input" type="text" id="login-user"
+                 autocomplete="username" autofocus spellcheck="false">
+        </div>
+        <div>
+          <label class="field-label" for="login-pass">Password</label>
+          <input class="field-input" type="password" id="login-pass"
+                 autocomplete="current-password">
+        </div>
+        <div class="error-msg" id="login-error"></div>
+        <button class="btn primary login-btn" type="submit" id="btn-login">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-login');
+      const errEl = document.getElementById('login-error');
+      errEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('login-user').value,
+            password: document.getElementById('login-pass').value,
+          }),
+        });
+        if (res.ok) {
+          window.location.href = '/';
+        } else {
+          const data = await res.json().catch(() => ({}));
+          errEl.textContent = data.error || 'Login failed.';
+          errEl.classList.add('show');
+        }
+      } catch {
+        errEl.textContent = 'Could not reach the server.';
+        errEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>

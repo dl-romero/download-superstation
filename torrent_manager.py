@@ -1,4 +1,5 @@
 import libtorrent as lt
+import shutil
 import threading
 import time
 import json
@@ -20,10 +21,12 @@ class TorrentManager:
                           4: 'normal', 5: 'high', 6: 'high', 7: 'high'}
 
     _SETTINGS_DEFAULTS = {
-        'max_download_speed': 0,   # KB/s, 0 = unlimited
-        'max_upload_speed':   0,   # KB/s, 0 = unlimited
-        'max_active_downloads': 0, # 0 = unlimited
-        'max_active_seeds':     0, # 0 = unlimited
+        'max_download_speed':   0,    # KB/s, 0 = unlimited
+        'max_upload_speed':     0,    # KB/s, 0 = unlimited
+        'max_active_downloads': 0,    # 0 = unlimited
+        'max_active_seeds':     0,    # 0 = unlimited
+        'seed_ratio_limit':     0.0,  # stop seeding at this ratio; 0 = never
+        'seed_time_limit':      0,    # stop seeding after N minutes; 0 = never
     }
 
     def __init__(self, download_path: str, data_path: str):
@@ -91,9 +94,13 @@ class TorrentManager:
                 self.download_path = Path(p)
 
         for key in ('max_download_speed', 'max_upload_speed',
-                    'max_active_downloads', 'max_active_seeds'):
+                    'max_active_downloads', 'max_active_seeds',
+                    'seed_time_limit'):
             if key in new:
                 s[key] = max(0, int(new[key]))
+
+        if 'seed_ratio_limit' in new:
+            s['seed_ratio_limit'] = max(0.0, float(new['seed_ratio_limit']))
 
         self.session.apply_settings(self._build_lt_settings(s))
         self._settings = s
@@ -223,11 +230,34 @@ class TorrentManager:
                 except Exception:
                     pass
 
+    def _check_seeding_limits(self):
+        ratio_limit = float(self._settings.get('seed_ratio_limit', 0))
+        time_limit  = int(self._settings.get('seed_time_limit', 0))
+        if not ratio_limit and not time_limit:
+            return
+        for h in self.session.get_torrents():
+            if not h.is_valid():
+                continue
+            st = h.status()
+            if int(st.state) != 4 or st.paused:
+                continue
+            if ratio_limit > 0 and st.all_time_download > 0:
+                if (st.all_time_upload / st.all_time_download) >= ratio_limit:
+                    h.pause()
+                    continue
+            if time_limit > 0:
+                try:
+                    if (st.seeding_time / 60) >= time_limit:
+                        h.pause()
+                except AttributeError:
+                    pass
+
     def _start_background_saver(self):
         def loop():
             while True:
                 time.sleep(60)
                 try:
+                    self._check_seeding_limits()
                     self._flush_resume_data()
                     self._save_meta()
                 except Exception as e:
@@ -400,14 +430,79 @@ class TorrentManager:
             return True
         return False
 
+    def get_disk_usage(self) -> dict:
+        try:
+            s = shutil.disk_usage(self.download_path)
+            return {'total': s.total, 'used': s.used, 'free': s.free}
+        except Exception:
+            return {'total': 0, 'used': 0, 'free': 0}
+
+    def get_torrent_detail(self, info_hash: str) -> dict | None:
+        for h in self.session.get_torrents():
+            if self._get_id(h) != info_hash:
+                continue
+            tf = h.torrent_file()
+
+            general = {
+                'hash': info_hash,
+                'comment':       tf.comment()       if tf else '',
+                'created_by':    tf.creator()       if tf else '',
+                'creation_date': tf.creation_date() if tf else 0,
+                'piece_length':  tf.piece_length()  if tf else 0,
+                'num_files':     tf.files().num_files() if tf else 0,
+            }
+
+            peers = []
+            try:
+                for p in h.get_peer_info():
+                    try:
+                        ip = f'{p.ip[0]}:{p.ip[1]}'
+                    except Exception:
+                        ip = str(p.ip)
+                    flags = []
+                    try:
+                        if p.flags & lt.peer_info.seed:        flags.append('S')
+                        if p.flags & lt.peer_info.interesting: flags.append('I')
+                        if p.flags & lt.peer_info.choked:      flags.append('C')
+                    except Exception:
+                        pass
+                    peers.append({
+                        'ip':         ip,
+                        'client':     p.client or '?',
+                        'down_speed': p.down_speed,
+                        'up_speed':   p.up_speed,
+                        'progress':   round(p.progress * 100, 1),
+                        'flags':      ''.join(flags) or '—',
+                    })
+            except Exception:
+                pass
+
+            trackers = []
+            try:
+                for t in h.trackers():
+                    trackers.append({
+                        'url':    t.url,
+                        'status': t.message or 'Waiting',
+                        'seeds':  t.scrape_complete,
+                        'peers':  t.scrape_incomplete,
+                    })
+            except Exception:
+                pass
+
+            return {'general': general, 'peers': peers, 'trackers': trackers}
+        return None
+
     def get_session_stats(self) -> dict:
         handles = [h for h in self.session.get_torrents() if h.is_valid()]
         total_dl = sum(h.status().download_rate for h in handles)
         total_ul = sum(h.status().upload_rate for h in handles)
+        disk = self.get_disk_usage()
         return {
             'download_speed': total_dl,
-            'upload_speed': total_ul,
-            'count': len(handles),
+            'upload_speed':   total_ul,
+            'count':          len(handles),
+            'disk_free':      disk['free'],
+            'disk_total':     disk['total'],
         }
 
     def shutdown(self):

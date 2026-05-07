@@ -17,6 +17,7 @@
     </div>
     <div class="spacer"></div>
     <button class="hdr-btn" title="Settings" id="btn-settings">⚙</button>
+    <button class="hdr-btn" title="Sign out" id="btn-logout">⏻</button>
   </header>
 
   <!-- ── Body ── -->
@@ -81,7 +82,7 @@
       </div>
 
       <!-- Table -->
-      <div class="table-wrap">
+      <div class="table-wrap" id="table-wrap">
         <table>
           <thead>
             <tr>
@@ -103,6 +104,29 @@
         </table>
       </div>
 
+      <!-- Detail Panel -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="detail-header">
+          <div class="detail-tabs" id="detail-tabs">
+            <div class="detail-tab active" data-dtab="general">General</div>
+            <div class="detail-tab" data-dtab="peers">Peers</div>
+            <div class="detail-tab" data-dtab="trackers">Trackers</div>
+          </div>
+          <div class="detail-name" id="detail-name">No torrent selected</div>
+        </div>
+        <div class="detail-body">
+          <div class="dtab-pane active" id="dtab-general">
+            <div class="detail-empty">Select a torrent to view details</div>
+          </div>
+          <div class="dtab-pane" id="dtab-peers">
+            <div class="detail-empty">Select a torrent to view peers</div>
+          </div>
+          <div class="dtab-pane" id="dtab-trackers">
+            <div class="detail-empty">Select a torrent to view trackers</div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -118,6 +142,10 @@
     </div>
     <div class="stat">
       Tasks: <span id="stat-count">0</span>
+    </div>
+    <div class="stat stat-disk" id="stat-disk" title="Free disk space on download drive">
+      <span class="stat-icon">💾</span>
+      <span id="stat-disk-free">—</span> free
     </div>
   </div>
 
@@ -274,6 +302,44 @@
             <input class="field-input" type="number" id="cfg-max-seed" min="0" placeholder="0">
             <div class="settings-hint">0 = unlimited</div>
           </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Seeding Limits</div>
+        <div class="settings-row settings-row-inline">
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-ratio-limit">Stop at Ratio</label>
+            <input class="field-input" type="number" id="cfg-ratio-limit" min="0" step="0.1" placeholder="0">
+            <div class="settings-hint">0 = seed forever</div>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-time-limit">Stop after (minutes)</label>
+            <input class="field-input" type="number" id="cfg-time-limit" min="0" placeholder="0">
+            <div class="settings-hint">0 = no time limit</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Security</div>
+        <div class="settings-row">
+          <label class="settings-label" for="cfg-username">Username</label>
+          <input class="field-input" type="text" id="cfg-username" autocomplete="off">
+        </div>
+        <div class="settings-row settings-row-inline">
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-cur-pw">Current Password</label>
+            <input class="field-input" type="password" id="cfg-cur-pw" autocomplete="current-password">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-new-pw">New Password</label>
+            <input class="field-input" type="password" id="cfg-new-pw" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="settings-row">
+          <button class="btn" id="btn-change-pw">Change Password</button>
+          <span class="settings-pw-msg" id="settings-pw-msg"></span>
         </div>
       </div>
 

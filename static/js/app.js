@@ -70,11 +70,17 @@ let sortKey = 'name';
 let sortAsc = true;
 let pollTimer = null;
 let selectedFile = null;
+let detailId = null;
+let detailTab = 'general';
 
 // ── API ─────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url, opts = {}) {
   const res = await fetch(url, opts);
+  if (res.status === 401) {
+    window.location.href = '/login';
+    return;
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `HTTP ${res.status}`);
@@ -92,6 +98,7 @@ async function fetchTorrents() {
     updateStatusBar(stats);
     renderTable();
     updateSidebar();
+    fetchDetail();
   } catch (e) {
     console.error('Poll error:', e);
   }
@@ -229,6 +236,8 @@ function rowClick(e, id) {
       selected.add(id);
     }
   }
+  detailId = id;
+  fetchDetail();
   renderTable();
 }
 
@@ -268,9 +277,14 @@ function updateToolbarButtons() {
 // ── status bar ───────────────────────────────────────────────────────────────
 
 function updateStatusBar(stats) {
-  document.getElementById('stat-dl').textContent = fmtSpeed(stats.download_speed);
-  document.getElementById('stat-ul').textContent = fmtSpeed(stats.upload_speed);
+  document.getElementById('stat-dl').textContent    = fmtSpeed(stats.download_speed);
+  document.getElementById('stat-ul').textContent    = fmtSpeed(stats.upload_speed);
   document.getElementById('stat-count').textContent = stats.count;
+  if (stats.disk_total > 0) {
+    document.getElementById('stat-disk-free').textContent = fmtSize(stats.disk_free);
+    document.getElementById('stat-disk').title =
+      `${fmtSize(stats.disk_free)} free of ${fmtSize(stats.disk_total)}`;
+  }
 }
 
 // ── toolbar actions ──────────────────────────────────────────────────────────
@@ -464,6 +478,130 @@ function closeCtxMenu() {
   document.getElementById('ctx-menu').classList.remove('open');
 }
 
+// ── detail panel ─────────────────────────────────────────────────────────────
+
+async function fetchDetail() {
+  if (!detailId) return;
+  const t = torrents.find(t => t.id === detailId);
+  if (!t) { detailId = null; renderDetailEmpty(); return; }
+  try {
+    const detail = await apiFetch(`/api/torrents/${detailId}/detail`);
+    if (detail) renderDetail(t, detail);
+  } catch { /* keep showing last state */ }
+}
+
+function renderDetailEmpty() {
+  document.getElementById('detail-name').textContent = 'No torrent selected';
+  document.getElementById('dtab-general').innerHTML  = '<div class="detail-empty">Select a torrent to view details</div>';
+  document.getElementById('dtab-peers').innerHTML    = '<div class="detail-empty">Select a torrent to view peers</div>';
+  document.getElementById('dtab-trackers').innerHTML = '<div class="detail-empty">Select a torrent to view trackers</div>';
+}
+
+function renderDetail(t, detail) {
+  document.getElementById('detail-name').textContent = t.name;
+  renderDetailGeneral(t, detail.general);
+  renderDetailPeers(detail.peers || []);
+  renderDetailTrackers(detail.trackers || []);
+}
+
+function renderDetailGeneral(t, g) {
+  const row = (key, val) =>
+    `<div class="detail-row"><span class="detail-key">${key}</span><span class="detail-val" title="${esc(String(val))}">${esc(String(val))}</span></div>`;
+
+  const created = g.creation_date
+    ? new Date(g.creation_date * 1000).toLocaleString()
+    : '—';
+
+  const left = [
+    row('Hash',       g.hash),
+    row('Save Path',  t.save_path),
+    row('Size',       fmtSize(t.size)),
+    row('Downloaded', fmtSize(t.downloaded)),
+    row('Uploaded',   fmtSize(t.uploaded)),
+    row('Piece Size', g.piece_length ? fmtSize(g.piece_length) : '—'),
+  ].join('');
+
+  const right = [
+    row('Status',   t.state),
+    row('Progress', t.progress + '%'),
+    row('Ratio',    fmtRatio(t.ratio)),
+    row('Peers',    `${t.peers} connected, ${t.seeds} seeds`),
+    row('Priority', t.priority),
+    row('Created',  created),
+  ].join('');
+
+  const comment = g.comment
+    ? `<div class="detail-row" style="grid-column:1/-1"><span class="detail-key">Comment</span><span class="detail-val">${esc(g.comment)}</span></div>`
+    : '';
+
+  document.getElementById('dtab-general').innerHTML =
+    `<div class="detail-grid"><div class="detail-col">${left}</div><div class="detail-col">${right}</div>${comment}</div>`;
+}
+
+function renderDetailPeers(peers) {
+  if (!peers.length) {
+    document.getElementById('dtab-peers').innerHTML = '<div class="detail-empty">No peers connected</div>';
+    return;
+  }
+  const rows = peers.map(p =>
+    `<tr>
+      <td>${esc(p.ip)}</td>
+      <td>${esc(p.client)}</td>
+      <td class="num">${fmtSpeed(p.down_speed)}</td>
+      <td class="num">${fmtSpeed(p.up_speed)}</td>
+      <td class="num">${p.progress}%</td>
+      <td>${esc(p.flags)}</td>
+    </tr>`).join('');
+  document.getElementById('dtab-peers').innerHTML =
+    `<table class="detail-table">
+      <thead><tr><th>IP</th><th>Client</th><th>↓ Speed</th><th>↑ Speed</th><th>Progress</th><th>Flags</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderDetailTrackers(trackers) {
+  if (!trackers.length) {
+    document.getElementById('dtab-trackers').innerHTML = '<div class="detail-empty">No trackers</div>';
+    return;
+  }
+  const rows = trackers.map(t => {
+    const seeds = t.seeds >= 0 ? t.seeds : '—';
+    const peers = t.peers >= 0 ? t.peers : '—';
+    return `<tr>
+      <td style="word-break:break-all">${esc(t.url)}</td>
+      <td>${esc(t.status)}</td>
+      <td class="num">${seeds}</td>
+      <td class="num">${peers}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('dtab-trackers').innerHTML =
+    `<table class="detail-table">
+      <thead><tr><th>URL</th><th>Status</th><th>Seeds</th><th>Peers</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.detail-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.dtab-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`dtab-${tab.dataset.dtab}`).classList.add('active');
+      detailTab = tab.dataset.dtab;
+    });
+  });
+});
+
+// ── logout ────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
   document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
@@ -478,16 +616,27 @@ async function openSettingsModal() {
   document.getElementById('settings-error').classList.remove('show');
   document.getElementById('btn-save-settings').disabled = false;
   document.getElementById('btn-save-settings').textContent = 'Save';
+  document.getElementById('cfg-cur-pw').value = '';
+  document.getElementById('cfg-new-pw').value = '';
+  const pwMsg = document.getElementById('settings-pw-msg');
+  pwMsg.textContent = '';
+  pwMsg.className = 'settings-pw-msg';
   try {
     const s = await apiFetch('/api/settings');
-    document.getElementById('cfg-download-path').value = s.download_path || '';
-    document.getElementById('cfg-dl-speed').value     = s.max_download_speed ?? 0;
-    document.getElementById('cfg-ul-speed').value     = s.max_upload_speed   ?? 0;
-    document.getElementById('cfg-max-dl').value       = s.max_active_downloads ?? 0;
-    document.getElementById('cfg-max-seed').value     = s.max_active_seeds     ?? 0;
+    document.getElementById('cfg-download-path').value = s.download_path         || '';
+    document.getElementById('cfg-dl-speed').value      = s.max_download_speed    ?? 0;
+    document.getElementById('cfg-ul-speed').value      = s.max_upload_speed      ?? 0;
+    document.getElementById('cfg-max-dl').value        = s.max_active_downloads  ?? 0;
+    document.getElementById('cfg-max-seed').value      = s.max_active_seeds      ?? 0;
+    document.getElementById('cfg-ratio-limit').value   = s.seed_ratio_limit      ?? 0;
+    document.getElementById('cfg-time-limit').value    = s.seed_time_limit       ?? 0;
   } catch (e) {
     console.error('Failed to load settings:', e);
   }
+  try {
+    const auth = await apiFetch('/api/auth/change-password').catch(() => null);
+    // populate username if endpoint exposed it; for now leave blank
+  } catch { /* ok */ }
   document.getElementById('settings-modal').classList.add('open');
 }
 
@@ -504,10 +653,12 @@ async function saveSettings() {
 
   const payload = {
     download_path:        document.getElementById('cfg-download-path').value.trim(),
-    max_download_speed:   parseInt(document.getElementById('cfg-dl-speed').value)   || 0,
-    max_upload_speed:     parseInt(document.getElementById('cfg-ul-speed').value)   || 0,
-    max_active_downloads: parseInt(document.getElementById('cfg-max-dl').value)     || 0,
-    max_active_seeds:     parseInt(document.getElementById('cfg-max-seed').value)   || 0,
+    max_download_speed:   parseInt(document.getElementById('cfg-dl-speed').value)    || 0,
+    max_upload_speed:     parseInt(document.getElementById('cfg-ul-speed').value)    || 0,
+    max_active_downloads: parseInt(document.getElementById('cfg-max-dl').value)      || 0,
+    max_active_seeds:     parseInt(document.getElementById('cfg-max-seed').value)    || 0,
+    seed_ratio_limit:     parseFloat(document.getElementById('cfg-ratio-limit').value) || 0,
+    seed_time_limit:      parseInt(document.getElementById('cfg-time-limit').value)  || 0,
   };
 
   try {
@@ -553,6 +704,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('file-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeFileModal();
+  });
+
+  document.getElementById('btn-change-pw').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-change-pw');
+    const msg = document.getElementById('settings-pw-msg');
+    msg.textContent = '';
+    msg.className = 'settings-pw-msg';
+    const curPw = document.getElementById('cfg-cur-pw').value;
+    const newPw = document.getElementById('cfg-new-pw').value;
+    const username = document.getElementById('cfg-username').value.trim();
+    if (!curPw || !newPw) {
+      msg.textContent = 'Fill in current and new password.';
+      msg.className = 'settings-pw-msg err';
+      return;
+    }
+    btn.disabled = true;
+    try {
+      await apiFetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: curPw, new_password: newPw, username }),
+      });
+      msg.textContent = 'Password changed.';
+      msg.className = 'settings-pw-msg ok';
+      document.getElementById('cfg-cur-pw').value = '';
+      document.getElementById('cfg-new-pw').value = '';
+    } catch (e) {
+      msg.textContent = e.message;
+      msg.className = 'settings-pw-msg err';
+    } finally {
+      btn.disabled = false;
+    }
   });
 });
 
