@@ -13,7 +13,7 @@ from flask import (Flask, jsonify, redirect, render_template,
 from torrent_manager import TorrentManager
 
 DOWNLOAD_PATH = os.environ.get('DOWNLOAD_PATH', str(Path.home() / 'Downloads' / 'torrents'))
-DATA_PATH     = os.environ.get('DATA_PATH',     str(Path.home() / '.torrent-webui'))
+DATA_PATH     = os.environ.get('DATA_PATH',     str(Path.home() / '.download-superstation'))
 HOST          = os.environ.get('HOST', '0.0.0.0')
 PORT          = int(os.environ.get('PORT', 8080))
 
@@ -249,6 +249,7 @@ def get_detail(info_hash):
 
 if __name__ == '__main__':
     auth = _load_auth()
+    print('[app] Download Superstation')
     print(f'[app] download path : {DOWNLOAD_PATH}')
     print(f'[app] data path     : {DATA_PATH}')
     print(f'[app] listening on  : http://{HOST}:{PORT}')

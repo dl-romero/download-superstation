@@ -319,7 +319,7 @@ All configuration is done via environment variables, both for Docker and bare-me
 | Variable | Default | Description |
 |---|---|---|
 | `DOWNLOAD_PATH` | `~/Downloads/torrents` | Where downloaded files are saved |
-| `DATA_PATH` | `~/.torrent-webui` | Where state files are stored |
+| `DATA_PATH` | `~/.download-superstation` | Where state files are stored |
 | `HOST` | `0.0.0.0` | Interface to bind to |
 | `PORT` | `8080` | Port to listen on |
 
