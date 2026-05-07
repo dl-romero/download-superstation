@@ -608,10 +608,35 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('info-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeInfoModal();
   });
+  document.getElementById('btn-check-update').addEventListener('click', triggerUpdate);
 });
 
 function closeInfoModal() {
   document.getElementById('info-modal').classList.remove('open');
+}
+
+async function triggerUpdate() {
+  const btn = document.getElementById('btn-check-update');
+  const msg = document.getElementById('info-update-msg');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  msg.className = 'info-update-msg';
+  msg.textContent = '';
+  try {
+    const res = await apiFetch('/api/update', { method: 'POST' });
+    const data = await res.json();
+    msg.textContent = data.message;
+    if (data.status === 'updated')   msg.classList.add('ok');
+    else if (data.status === 'up_to_date') msg.classList.add('ok');
+    else if (data.status === 'container')  msg.classList.add('info');
+    else                                   msg.classList.add('err');
+  } catch {
+    msg.textContent = 'Could not reach the server.';
+    msg.classList.add('err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Check for Updates';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

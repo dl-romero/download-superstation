@@ -3,7 +3,9 @@ import json
 import os
 import secrets
 import signal
+import subprocess
 import sys
+import threading
 from datetime import timedelta
 from functools import wraps
 from pathlib import Path
@@ -245,6 +247,64 @@ def get_detail(info_hash):
     if detail is None:
         return jsonify({'error': 'Torrent not found'}), 404
     return jsonify(detail)
+
+
+_APP_DIR = Path(__file__).parent
+_IN_CONTAINER = (
+    Path('/.dockerenv').exists() or
+    os.environ.get('container') in ('oci', 'podman', 'docker')
+)
+
+@app.route('/api/update', methods=['POST'])
+@login_required
+def trigger_update():
+    if _IN_CONTAINER:
+        return jsonify({
+            'status': 'container',
+            'message': (
+                'Running inside a container — updates are managed by the container runtime. '
+                'To apply the latest image, restart the service:\n\n'
+                '  systemctl --user restart download-superstation\n\n'
+                'The daily auto-update timer will also do this automatically.'
+            ),
+        })
+
+    if not (_APP_DIR / '.git').exists():
+        return jsonify({
+            'status': 'error',
+            'message': 'Not a git repository. Re-install via git clone to enable in-app updates.',
+        })
+
+    try:
+        subprocess.run(['git', 'fetch', 'origin', 'main'],
+                       cwd=_APP_DIR, check=True, capture_output=True)
+        local  = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                         cwd=_APP_DIR).decode().strip()
+        remote = subprocess.check_output(['git', 'rev-parse', 'origin/main'],
+                                         cwd=_APP_DIR).decode().strip()
+    except subprocess.CalledProcessError as e:
+        return jsonify({'status': 'error', 'message': f'Git error: {e.stderr.decode().strip()}'})
+
+    if local == remote:
+        return jsonify({'status': 'up_to_date', 'message': 'Already up to date.'})
+
+    try:
+        subprocess.run(['git', 'pull', 'origin', 'main'],
+                       cwd=_APP_DIR, check=True, capture_output=True)
+        pip = _APP_DIR / 'venv' / 'bin' / 'pip'
+        if pip.exists():
+            subprocess.run([str(pip), 'install', '-q', '-r', str(_APP_DIR / 'requirements.txt')],
+                           check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        return jsonify({'status': 'error', 'message': f'Update failed: {e.stderr.decode().strip()}'})
+
+    def _restart():
+        import time
+        time.sleep(1.5)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    threading.Thread(target=_restart, daemon=True).start()
+    return jsonify({'status': 'updated', 'message': 'Update applied. Restarting…'})
 
 
 if __name__ == '__main__':
