@@ -314,4 +314,4 @@ if __name__ == '__main__':
     print(f'[app] data path     : {DATA_PATH}')
     print(f'[app] listening on  : http://{HOST}:{PORT}')
     print(f'[app] username      : {auth["username"]}')
-    app.run(host=HOST, port=PORT, debug=False)
+    app.run(host=HOST, port=PORT, debug=False, threaded=True)
