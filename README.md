@@ -11,7 +11,7 @@ A self-hosted torrent management web UI built with Python and Flask, inspired by
 - Automatic seeding after download completes
 - Seeding limits — stop at a target ratio or after a set number of minutes
 - Live detail panel — General info, Peers, and Trackers tabs update every 2 seconds
-- Live progress bars, download/upload speeds, ETA, and share ratio
+- Live progress bars, download/upload speeds, ETA, and share ratio with visual 1:1 indicator
 - Disk free space shown in status bar
 - Sidebar categories: All, Downloading, Seeding, Completed, Paused
 - Sortable table columns and right-click context menu
@@ -475,6 +475,15 @@ Torrents seed automatically after completing. To limit seeding, open ⚙ Setting
 - **Stop after (minutes)** — pauses after this many minutes of seeding (e.g. `1440` for 24 hours)
 
 Set either to `0` to disable that limit.
+
+### Ratio tracking
+
+The **Ratio** column shows a progress bar and colour-coded value indicating upload progress toward a 1:1 ratio:
+
+- **Red bar / red value** — below 1:1 (uploaded less than downloaded)
+- **Green bar / green value** — at or above 1:1
+
+To automatically stop seeding once you hit 1:1, set **Stop at Ratio** to `1.0` in Settings → Seeding Limits.
 
 ### Sidebar categories
 

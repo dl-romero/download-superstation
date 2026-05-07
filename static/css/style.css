@@ -148,6 +148,16 @@ td.name { font-weight: 500; }
 td.num { text-align: right; }
 
 /* progress bar */
+.ratio-cell { min-width: 90px; }
+.ratio-wrap { display: flex; align-items: center; gap: 6px; }
+.ratio-bar  { flex: 1; height: 6px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }
+.ratio-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+.ratio-fill-low  { background: linear-gradient(90deg, #f87171, #ef4444); }
+.ratio-fill-good { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.ratio-label { font-size: 11px; width: 36px; text-align: right; flex-shrink: 0; font-weight: 600; }
+.ratio-low  { color: #ef4444; }
+.ratio-good { color: #16a34a; }
+.ratio-none { color: var(--text-dim); font-size: 11px; }
 .prog-cell { min-width: 110px; }
 .prog-wrap { display: flex; align-items: center; gap: 6px; }
 .prog-bar { flex: 1; height: 8px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }

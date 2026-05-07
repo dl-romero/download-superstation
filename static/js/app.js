@@ -29,6 +29,17 @@ function fmtRatio(r) {
   return r > 0 ? r.toFixed(3) : '—';
 }
 
+function renderRatio(r) {
+  if (r <= 0) return '<span class="ratio-none">—</span>';
+  const pct = Math.min(r / 1.0 * 100, 100).toFixed(1);
+  const cls = r >= 1.0 ? 'ratio-fill-good' : 'ratio-fill-low';
+  const label = r.toFixed(3);
+  return `<div class="ratio-wrap">
+    <div class="ratio-bar"><div class="ratio-fill ${cls}" style="width:${pct}%"></div></div>
+    <span class="ratio-label ${r >= 1.0 ? 'ratio-good' : 'ratio-low'}">${label}</span>
+  </div>`;
+}
+
 function badgeClass(state) {
   const map = {
     'Downloading': 'dl',
@@ -207,7 +218,7 @@ function renderTable() {
       </td>
       <td class="num">${fmtSpeed(t.download_speed)}</td>
       <td class="num">${fmtSpeed(t.upload_speed)}</td>
-      <td class="num">${fmtRatio(t.ratio)}</td>
+      <td class="ratio-cell">${renderRatio(t.ratio)}</td>
       <td class="num">${fmtEta(t.eta)}</td>
     </tr>`;
   });
