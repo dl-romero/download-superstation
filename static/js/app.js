@@ -623,8 +623,7 @@ async function triggerUpdate() {
   msg.className = 'info-update-msg';
   msg.textContent = '';
   try {
-    const res = await apiFetch('/api/update', { method: 'POST' });
-    const data = await res.json();
+    const data = await apiFetch('/api/update', { method: 'POST' });
     msg.textContent = data.message;
     if (data.status === 'updated')   msg.classList.add('ok');
     else if (data.status === 'up_to_date') msg.classList.add('ok');
