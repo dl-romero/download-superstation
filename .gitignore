@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.resume
+*.torrent
+meta.json
+settings.json
+auth.json
+secret.key
