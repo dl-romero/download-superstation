@@ -25,7 +25,7 @@ if [ "$LOCAL" = "$REMOTE" ]; then
 fi
 
 echo "[update] updating $LOCAL -> $REMOTE..."
-git pull origin main
+git reset --hard origin/main
 
 echo "[update] syncing Python dependencies..."
 ./venv/bin/pip install -q -r requirements.txt
