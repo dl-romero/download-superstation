@@ -244,6 +244,22 @@ label.field-label { font-size: 12px; font-weight: 600; color: var(--text-dim); d
 .error-msg { color: var(--danger); font-size: 12px; display: none; }
 .error-msg.show { display: block; }
 
+/* ── info modal ── */
+.modal-narrow { max-width: 420px; }
+.info-body { gap: 0; padding: 20px 24px; }
+.info-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.info-logo-icon { width: 48px; height: 48px; font-size: 17px; border-radius: 10px; flex-shrink: 0; }
+.info-logo-text { display: flex; flex-direction: column; gap: 3px; }
+.info-app-name { font-size: 16px; font-weight: 700; color: #1a3354; }
+.info-app-sub  { font-size: 12px; color: #64849c; }
+.info-divider  { border: none; border-top: 1px solid #e2e8f0; margin-bottom: 16px; }
+.info-rows     { display: flex; flex-direction: column; gap: 10px; }
+.info-row      { display: flex; align-items: baseline; gap: 12px; font-size: 13px; }
+.info-label    { width: 80px; flex-shrink: 0; color: #64849c; font-weight: 500; }
+.info-value    { color: #1a3354; }
+.info-link     { color: #2563eb; text-decoration: none; word-break: break-all; }
+.info-link:hover { text-decoration: underline; }
+
 /* ── login page ── */
 .login-body { background: var(--hdr-bg); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
 .login-wrap { width: 360px; }

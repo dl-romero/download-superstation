@@ -16,6 +16,7 @@
       <span class="app-name">Download Superstation</span>
     </div>
     <div class="spacer"></div>
+    <button class="hdr-btn" title="About" id="btn-info">ℹ</button>
     <button class="hdr-btn" title="Settings" id="btn-settings">⚙</button>
     <button class="hdr-btn" title="Sign out" id="btn-logout">⏻</button>
   </header>
@@ -349,6 +350,44 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeSettingsModal()">Cancel</button>
       <button class="btn primary" id="btn-save-settings">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Info Modal ── -->
+<div class="modal-overlay" id="info-modal">
+  <div class="modal modal-narrow">
+    <div class="modal-header">
+      <h2>About</h2>
+      <button class="modal-close" onclick="closeInfoModal()">×</button>
+    </div>
+    <div class="modal-body info-body">
+      <div class="info-logo">
+        <div class="logo-icon info-logo-icon">DS</div>
+        <div class="info-logo-text">
+          <div class="info-app-name">Download Superstation</div>
+          <div class="info-app-sub">Self-hosted torrent manager</div>
+        </div>
+      </div>
+      <div class="info-divider"></div>
+      <div class="info-rows">
+        <div class="info-row">
+          <span class="info-label">Author</span>
+          <span class="info-value">D. Romero</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Website</span>
+          <a class="info-link" href="https://dromero.dev" target="_blank" rel="noopener">dromero.dev</a>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Repository</span>
+          <a class="info-link" href="https://github.com/dl-romero/download-superstation" target="_blank" rel="noopener">github.com/dl-romero/download-superstation</a>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="closeInfoModal()">Close</button>
     </div>
   </div>
 </div>

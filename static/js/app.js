@@ -603,6 +603,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-info').addEventListener('click', () =>
+    document.getElementById('info-modal').classList.add('open'));
+  document.getElementById('info-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeInfoModal();
+  });
+});
+
+function closeInfoModal() {
+  document.getElementById('info-modal').classList.remove('open');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
   document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
   document.getElementById('settings-modal').addEventListener('click', e => {
