@@ -84,6 +84,23 @@ def resume_torrent(info_hash):
     return jsonify({'ok': ok})
 
 
+@app.route('/api/settings')
+def get_settings():
+    return jsonify(manager.get_settings())
+
+
+@app.route('/api/settings', methods=['POST'])
+def update_settings():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'No data provided'}), 400
+    try:
+        updated = manager.update_settings(body)
+        return jsonify(updated)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
 @app.route('/api/torrents/<info_hash>/priority', methods=['POST'])
 def set_priority(info_hash):
     body = request.get_json(silent=True) or {}

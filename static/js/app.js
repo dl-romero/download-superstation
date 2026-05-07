@@ -465,6 +465,67 @@ function closeCtxMenu() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
+  document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
+  document.getElementById('settings-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSettingsModal();
+  });
+});
+
+// ── settings modal ────────────────────────────────────────────────────────────
+
+async function openSettingsModal() {
+  document.getElementById('settings-error').classList.remove('show');
+  document.getElementById('btn-save-settings').disabled = false;
+  document.getElementById('btn-save-settings').textContent = 'Save';
+  try {
+    const s = await apiFetch('/api/settings');
+    document.getElementById('cfg-download-path').value = s.download_path || '';
+    document.getElementById('cfg-dl-speed').value     = s.max_download_speed ?? 0;
+    document.getElementById('cfg-ul-speed').value     = s.max_upload_speed   ?? 0;
+    document.getElementById('cfg-max-dl').value       = s.max_active_downloads ?? 0;
+    document.getElementById('cfg-max-seed').value     = s.max_active_seeds     ?? 0;
+  } catch (e) {
+    console.error('Failed to load settings:', e);
+  }
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+async function saveSettings() {
+  const btn = document.getElementById('btn-save-settings');
+  const errEl = document.getElementById('settings-error');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const payload = {
+    download_path:        document.getElementById('cfg-download-path').value.trim(),
+    max_download_speed:   parseInt(document.getElementById('cfg-dl-speed').value)   || 0,
+    max_upload_speed:     parseInt(document.getElementById('cfg-ul-speed').value)   || 0,
+    max_active_downloads: parseInt(document.getElementById('cfg-max-dl').value)     || 0,
+    max_active_seeds:     parseInt(document.getElementById('cfg-max-seed').value)   || 0,
+  };
+
+  try {
+    await apiFetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    closeSettingsModal();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('ctx-pause').addEventListener('click', () => { onPause(); closeCtxMenu(); });
   document.getElementById('ctx-resume').addEventListener('click', () => { onResume(); closeCtxMenu(); });
   document.getElementById('ctx-delete').addEventListener('click', () => { onDelete(); closeCtxMenu(); });

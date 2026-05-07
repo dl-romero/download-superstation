@@ -16,7 +16,7 @@
       <span class="app-name">Download Station</span>
     </div>
     <div class="spacer"></div>
-    <button class="hdr-btn" title="Settings" onclick="alert('Settings coming soon')">⚙</button>
+    <button class="hdr-btn" title="Settings" id="btn-settings">⚙</button>
   </header>
 
   <!-- ── Body ── -->
@@ -216,6 +216,73 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeFileModal()">Cancel</button>
       <button class="btn primary" id="btn-apply-files">Apply</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Settings Modal ── -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="modal-close" onclick="closeSettingsModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="settings-section">
+        <div class="settings-section-title">Storage</div>
+        <div class="settings-row">
+          <label class="settings-label" for="cfg-download-path">Default Download Path</label>
+          <input class="field-input" type="text" id="cfg-download-path" placeholder="/home/user/Downloads/torrents">
+          <div class="settings-hint">Where new torrents are saved when no custom path is set.</div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Speed Limits</div>
+        <div class="settings-row settings-row-inline">
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-dl-speed">Max Download Speed</label>
+            <div class="settings-input-unit">
+              <input class="field-input" type="number" id="cfg-dl-speed" min="0" placeholder="0">
+              <span class="unit">KB/s</span>
+            </div>
+            <div class="settings-hint">0 = unlimited</div>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-ul-speed">Max Upload Speed</label>
+            <div class="settings-input-unit">
+              <input class="field-input" type="number" id="cfg-ul-speed" min="0" placeholder="0">
+              <span class="unit">KB/s</span>
+            </div>
+            <div class="settings-hint">0 = unlimited</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Active Torrent Limits</div>
+        <div class="settings-row settings-row-inline">
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-max-dl">Max Active Downloads</label>
+            <input class="field-input" type="number" id="cfg-max-dl" min="0" placeholder="0">
+            <div class="settings-hint">0 = unlimited</div>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="cfg-max-seed">Max Active Seeds</label>
+            <input class="field-input" type="number" id="cfg-max-seed" min="0" placeholder="0">
+            <div class="settings-hint">0 = unlimited</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="error-msg" id="settings-error"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeSettingsModal()">Cancel</button>
+      <button class="btn primary" id="btn-save-settings">Save</button>
     </div>
   </div>
 </div>

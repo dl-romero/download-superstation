@@ -19,25 +19,87 @@ class TorrentManager:
     _FILE_PRIORITY_REV = {0: 'skip', 1: 'low', 2: 'low', 3: 'normal',
                           4: 'normal', 5: 'high', 6: 'high', 7: 'high'}
 
+    _SETTINGS_DEFAULTS = {
+        'max_download_speed': 0,   # KB/s, 0 = unlimited
+        'max_upload_speed':   0,   # KB/s, 0 = unlimited
+        'max_active_downloads': 0, # 0 = unlimited
+        'max_active_seeds':     0, # 0 = unlimited
+    }
+
     def __init__(self, download_path: str, data_path: str):
-        self.download_path = Path(download_path)
         self.data_path = Path(data_path)
-        self.download_path.mkdir(parents=True, exist_ok=True)
         self.data_path.mkdir(parents=True, exist_ok=True)
 
-        settings = {
+        # Load persisted settings; the constructor download_path is the fallback default.
+        self._settings = self._load_settings(default_download_path=download_path)
+        self.download_path = Path(self._settings['download_path'])
+        self.download_path.mkdir(parents=True, exist_ok=True)
+
+        lt_settings = {
             'listen_interfaces': '0.0.0.0:6881',
             'enable_dht': True,
             'enable_lsd': True,
             'enable_upnp': True,
             'enable_natpmp': True,
             'alert_mask': lt.alert.category_t.all_categories,
+            **self._build_lt_settings(self._settings),
         }
-        self.session = lt.session(settings)
+        self.session = lt.session(lt_settings)
         self._lock = threading.Lock()
         self._priorities: dict[str, str] = {}   # info_hash -> 'high'|'normal'|'low'
         self._load_saved_torrents()
         self._start_background_saver()
+
+    # ── settings ──────────────────────────────────────────────────────────
+
+    def _settings_file(self) -> Path:
+        return self.data_path / 'settings.json'
+
+    def _load_settings(self, default_download_path: str) -> dict:
+        s = {**self._SETTINGS_DEFAULTS, 'download_path': default_download_path}
+        if self._settings_file().exists():
+            try:
+                with open(self._settings_file()) as f:
+                    s.update(json.load(f))
+            except Exception as e:
+                print(f'[torrent] could not read settings: {e}')
+        return s
+
+    @staticmethod
+    def _build_lt_settings(s: dict) -> dict:
+        lt_s = {
+            'download_rate_limit': s['max_download_speed'] * 1024 if s['max_download_speed'] > 0 else 0,
+            'upload_rate_limit':   s['max_upload_speed']   * 1024 if s['max_upload_speed']   > 0 else 0,
+        }
+        if s['max_active_downloads'] > 0:
+            lt_s['active_downloads'] = s['max_active_downloads']
+        if s['max_active_seeds'] > 0:
+            lt_s['active_seeds'] = s['max_active_seeds']
+        return lt_s
+
+    def get_settings(self) -> dict:
+        return dict(self._settings)
+
+    def update_settings(self, new: dict) -> dict:
+        s = dict(self._settings)
+
+        if 'download_path' in new:
+            p = new['download_path'].strip()
+            if p:
+                Path(p).mkdir(parents=True, exist_ok=True)
+                s['download_path'] = p
+                self.download_path = Path(p)
+
+        for key in ('max_download_speed', 'max_upload_speed',
+                    'max_active_downloads', 'max_active_seeds'):
+            if key in new:
+                s[key] = max(0, int(new[key]))
+
+        self.session.apply_settings(self._build_lt_settings(s))
+        self._settings = s
+        with open(self._settings_file(), 'w') as f:
+            json.dump(s, f, indent=2)
+        return s
 
     # ── persistence helpers ────────────────────────────────────────────────
 
