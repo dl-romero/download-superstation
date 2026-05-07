@@ -6,6 +6,13 @@ import json
 from pathlib import Path
 
 
+def _s(value) -> str:
+    """Safely convert libtorrent string fields — some return bytes in Python 3."""
+    if isinstance(value, bytes):
+        return value.decode('utf-8', errors='replace')
+    return str(value) if value is not None else ''
+
+
 class TorrentManager:
     _STATE_LABELS = [
         'Checking', 'Fetching Metadata', 'Downloading',
@@ -444,11 +451,11 @@ class TorrentManager:
             tf = h.torrent_file()
 
             general = {
-                'hash': info_hash,
-                'comment':       tf.comment()       if tf else '',
-                'created_by':    tf.creator()       if tf else '',
-                'creation_date': tf.creation_date() if tf else 0,
-                'piece_length':  tf.piece_length()  if tf else 0,
+                'hash':          info_hash,
+                'comment':       _s(tf.comment())       if tf else '',
+                'created_by':    _s(tf.creator())       if tf else '',
+                'creation_date': tf.creation_date()     if tf else 0,
+                'piece_length':  tf.piece_length()      if tf else 0,
                 'num_files':     tf.files().num_files() if tf else 0,
             }
 
@@ -468,7 +475,7 @@ class TorrentManager:
                         pass
                     peers.append({
                         'ip':         ip,
-                        'client':     p.client or '?',
+                        'client':     _s(p.client) or '?',
                         'down_speed': p.down_speed,
                         'up_speed':   p.up_speed,
                         'progress':   round(p.progress * 100, 1),
@@ -481,8 +488,8 @@ class TorrentManager:
             try:
                 for t in h.trackers():
                     trackers.append({
-                        'url':    t.url,
-                        'status': t.message or 'Waiting',
+                        'url':    _s(t.url),
+                        'status': _s(t.message) or 'Waiting',
                         'seeds':  t.scrape_complete,
                         'peers':  t.scrape_incomplete,
                     })
