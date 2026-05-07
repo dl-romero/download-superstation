@@ -10,7 +10,7 @@ Restart=always
 RestartSec=5
 Environment=PODMAN_SYSTEMD_UNIT=%n
 ExecStartPre=-/usr/bin/podman rm -f download-superstation
-ExecStart=/usr/bin/podman run --rm \
+ExecStart=/usr/bin/podman run --rm --userns=keep-id \
     --name download-superstation \
     --label "io.containers.autoupdate=registry" \
     -p 8080:8080 \
