@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.gitignore
+data/
+downloads/
+*.resume
+*.torrent
+meta.json
+settings.json
+auth.json
+secret.key
+install.sh
+run.sh
+torrent-webui.service

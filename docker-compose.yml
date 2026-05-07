@@ -1,0 +1,16 @@
+services:
+  download-superstation:
+    image: ghcr.io/dl-romero/download-superstation:latest
+    container_name: download-superstation
+    ports:
+      - "8080:8080"
+      - "6881:6881/tcp"
+      - "6881:6881/udp"
+    volumes:
+      - ./downloads:/downloads
+      - ./data:/data
+    environment:
+      DOWNLOAD_PATH: /downloads
+      DATA_PATH: /data
+      PORT: 8080
+    restart: unless-stopped
