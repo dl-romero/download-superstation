@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "=== Download Station installer (Rocky Linux / x86_64) ==="
+echo "=== Download Superstation installer (Rocky Linux / x86_64) ==="
 
 # System deps (libtorrent has a C extension that needs these)
 sudo dnf install -y python3 python3-pip python3-devel gcc-c++ boost-devel openssl-devel
