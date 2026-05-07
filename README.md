@@ -390,6 +390,28 @@ The web UI requires a username and password. On first run, default credentials a
 
 Credentials are stored as PBKDF2-SHA256 hashes in `$DATA_PATH/auth.json`. Sessions last 30 days.
 
+### Resetting a forgotten password
+
+If you lose access and can no longer log in, delete `auth.json` from your data directory and restart the service. The app will recreate it with the default credentials (`admin` / `admin`) on next startup.
+
+**Docker / Podman:**
+```bash
+# Find your data volume path, then:
+rm /path/to/data/auth.json
+# Docker
+docker restart download-superstation
+# Podman (systemd)
+systemctl --user restart download-superstation
+```
+
+**Bare metal:**
+```bash
+rm ~/.download-superstation/auth.json
+sudo systemctl restart torrent-webui
+```
+
+Change the password again immediately after logging back in.
+
 ---
 
 ## Usage

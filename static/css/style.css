@@ -262,6 +262,8 @@ label.field-label { font-size: 12px; font-weight: 600; color: var(--text-dim); d
 
 /* ── login page ── */
 .login-body { background: var(--hdr-bg); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+.login-reset-hint { margin-top: 14px; font-size: 11px; color: #64849c; text-align: center; line-height: 1.5; }
+.login-reset-hint code { font-family: monospace; background: rgba(255,255,255,.08); padding: 1px 4px; border-radius: 3px; color: #94b4cc; }
 .login-wrap { width: 360px; }
 .login-card { background: #fff; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.45); overflow: hidden; }
 .login-header { background: var(--hdr-bg); padding: 28px; text-align: center; border-bottom: 1px solid #112240; }
