@@ -1,0 +1,7 @@
+[Unit]
+Description=Download Superstation image update check (Podman)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/podman auto-update --filter name=download-superstation

@@ -1,0 +1,8 @@
+[Unit]
+Description=Download Superstation image update check
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/download-superstation/scripts/docker-update.sh

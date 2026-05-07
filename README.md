@@ -191,6 +191,92 @@ sudo firewall-cmd --reload
 
 ---
 
+## Running as a Systemd Service
+
+The `systemd/` directory contains unit files for running and auto-updating the container under systemd — for both Docker (system service) and Podman (rootless user service).
+
+### Docker (system service)
+
+The install script copies the unit files, sets up the data directories, and enables the service and auto-update timer.
+
+```bash
+git clone https://github.com/dl-romero/download-superstation.git
+cd download-superstation
+sudo bash scripts/install-docker-service.sh
+```
+
+What it installs:
+
+| Unit | Purpose |
+|---|---|
+| `download-superstation.service` | Runs the container; restarts on failure |
+| `download-superstation-update.service` | Pulls the latest image and restarts if it changed |
+| `download-superstation-update.timer` | Runs the update check daily at 4 AM |
+
+Common operations:
+
+```bash
+sudo systemctl status download-superstation
+sudo systemctl restart download-superstation
+sudo systemctl reload download-superstation   # restart container in-place
+sudo journalctl -fu download-superstation     # follow logs
+```
+
+Trigger a manual update check:
+
+```bash
+sudo systemctl start download-superstation-update.service
+```
+
+Data lives at `/opt/download-superstation/downloads` and `/opt/download-superstation/data`. Edit the service file to change paths or ports:
+
+```bash
+sudo systemctl edit download-superstation
+```
+
+---
+
+### Podman (rootless user service)
+
+Runs as your own user — no root required after install. The container uses the `io.containers.autoupdate=registry` label so `podman auto-update` can restart it automatically when a new image is available.
+
+```bash
+git clone https://github.com/dl-romero/download-superstation.git
+cd download-superstation
+bash scripts/install-podman-service.sh
+```
+
+What it installs (into `~/.config/systemd/user/`):
+
+| Unit | Purpose |
+|---|---|
+| `download-superstation.service` | Runs the container; restarts on failure |
+| `download-superstation-update.service` | Runs `podman auto-update` for this container |
+| `download-superstation-update.timer` | Runs the update check daily at 4 AM |
+
+Common operations:
+
+```bash
+systemctl --user status download-superstation
+systemctl --user restart download-superstation
+systemctl --user reload download-superstation   # restart container in-place
+journalctl --user -fu download-superstation     # follow logs
+```
+
+Trigger a manual update check:
+
+```bash
+systemctl --user start download-superstation-update.service
+# or directly:
+podman auto-update --filter name=download-superstation
+```
+
+Data lives at `~/download-superstation/downloads` and `~/download-superstation/data`.
+
+The install script runs `loginctl enable-linger` so the service starts at boot without requiring a login session.
+
+---
+
 ## Manual Installation (Rocky Linux / bare metal)
 
 ### Requirements
@@ -247,17 +333,32 @@ DOWNLOAD_PATH=/mnt/storage/torrents DATA_PATH=/opt/torrent-data PORT=9090 bash r
 
 ## Running as a systemd Service (bare metal)
 
-A systemd unit file is included. To install it:
+**Install via `git clone`** so the auto-updater can pull changes later:
 
 ```bash
-# Copy the app
-sudo cp -r . /opt/torrent-webui
+sudo git clone https://github.com/dl-romero/download-superstation.git /opt/torrent-webui
 cd /opt/torrent-webui && sudo bash install.sh
 
-# Install the service
+# Install the service and auto-update timer
 sudo cp torrent-webui.service /etc/systemd/system/
+sudo cp systemd/bare-metal-download-superstation-update.service /etc/systemd/system/download-superstation-update.service
+sudo cp systemd/bare-metal-download-superstation-update.timer   /etc/systemd/system/download-superstation-update.timer
+sudo cp scripts/bare-metal-update.sh /opt/torrent-webui/scripts/bare-metal-update.sh
+sudo chmod +x /opt/torrent-webui/scripts/bare-metal-update.sh
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now torrent-webui
+sudo systemctl enable --now download-superstation-update.timer
+```
+
+The timer runs the updater daily at 4 AM. It pulls the latest commit, syncs any new Python dependencies, and restarts the service only when something actually changed.
+
+Trigger a manual update at any time:
+
+```bash
+sudo systemctl start download-superstation-update.service
+# or directly:
+sudo bash /opt/torrent-webui/scripts/bare-metal-update.sh
 ```
 
 Edit `/etc/systemd/system/torrent-webui.service` to customise the user, port, or paths:

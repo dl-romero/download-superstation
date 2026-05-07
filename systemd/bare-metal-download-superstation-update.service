@@ -1,0 +1,8 @@
+[Unit]
+Description=Download Superstation bare-metal update check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/torrent-webui/scripts/bare-metal-update.sh

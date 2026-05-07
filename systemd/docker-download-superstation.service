@@ -1,0 +1,27 @@
+[Unit]
+Description=Download Superstation
+Documentation=https://github.com/dl-romero/download-superstation
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=30
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f download-superstation
+ExecStart=/usr/bin/docker run --rm \
+    --name download-superstation \
+    -p 8080:8080 \
+    -p 6881:6881/tcp \
+    -p 6881:6881/udp \
+    -v /opt/download-superstation/downloads:/downloads \
+    -v /opt/download-superstation/data:/data \
+    -e DOWNLOAD_PATH=/downloads \
+    -e DATA_PATH=/data \
+    -e PORT=8080 \
+    ghcr.io/dl-romero/download-superstation:latest
+ExecReload=/usr/bin/docker restart download-superstation
+ExecStop=/usr/bin/docker stop download-superstation
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,29 @@
+[Unit]
+Description=Download Superstation (Podman)
+Documentation=https://github.com/dl-romero/download-superstation
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+TimeoutStartSec=30
+Restart=always
+RestartSec=5
+Environment=PODMAN_SYSTEMD_UNIT=%n
+ExecStartPre=-/usr/bin/podman rm -f download-superstation
+ExecStart=/usr/bin/podman run --rm \
+    --name download-superstation \
+    --label "io.containers.autoupdate=registry" \
+    -p 8080:8080 \
+    -p 6881:6881/tcp \
+    -p 6881:6881/udp \
+    -v %h/download-superstation/downloads:/downloads:Z \
+    -v %h/download-superstation/data:/data:Z \
+    -e DOWNLOAD_PATH=/downloads \
+    -e DATA_PATH=/data \
+    -e PORT=8080 \
+    ghcr.io/dl-romero/download-superstation:latest
+ExecReload=/usr/bin/podman restart download-superstation
+ExecStop=/usr/bin/podman stop download-superstation
+
+[Install]
+WantedBy=default.target

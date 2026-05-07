@@ -1,5 +1,5 @@
 [Unit]
-Description=Download Station torrent web UI
+Description=Download Superstation
 After=network.target
 
 [Service]

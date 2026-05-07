@@ -54,6 +54,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build bare-metal tarball
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TARBALL="download-superstation-${{ github.ref_name }}-linux.tar.gz"
+          mkdir -p dist/download-superstation
+          cp app.py torrent_manager.py requirements.txt install.sh run.sh torrent-webui.service dist/download-superstation/
+          cp -r templates static dist/download-superstation/
+          mkdir -p dist/download-superstation/scripts
+          cp scripts/bare-metal-update.sh dist/download-superstation/scripts/
+          chmod +x dist/download-superstation/scripts/bare-metal-update.sh
+          mkdir -p dist/download-superstation/systemd
+          cp systemd/bare-metal-download-superstation-update.service \
+             systemd/bare-metal-download-superstation-update.timer \
+             dist/download-superstation/systemd/
+          tar -czf "$TARBALL" -C dist download-superstation
+          echo "TARBALL=$TARBALL" >> "$GITHUB_ENV"
+
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -75,4 +92,15 @@ jobs:
           docker compose up -d
           \`\`\`
 
-          See the [README](https://github.com/${{ github.repository }}#docker) for full documentation."
+          ## Linux (bare metal)
+
+          Download and extract the release tarball:
+          \`\`\`bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${TARBALL}
+          tar -xzf ${TARBALL}
+          cd download-superstation
+          sudo bash install.sh
+          \`\`\`
+
+          See the [README](https://github.com/${{ github.repository }}#readme) for full documentation." \
+            "$TARBALL"
