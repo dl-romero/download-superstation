@@ -376,7 +376,7 @@ class TorrentManager:
                 'size': total,
                 'downloaded': done,
                 'uploaded': st.all_time_upload,
-                'progress': round(st.progress * 100, 1),
+                'progress': round(done / total * 100, 1) if total > 0 else 0.0,
                 'state': label,
                 'download_speed': st.download_rate,
                 'upload_speed': st.upload_rate,
