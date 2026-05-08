@@ -40,6 +40,53 @@ function renderRatio(r) {
   </div>`;
 }
 
+// ── column definitions ───────────────────────────────────────────────────────
+
+function buildProgCell(t) {
+  const isSeeding = t.state === 'Seeding' || t.state === 'Finished';
+  if (isSeeding) {
+    const rPct = Math.min(t.ratio * 100, 100).toFixed(1);
+    const rCls = t.ratio >= 1.0 ? 'prog-fill prog-seed-good' : 'prog-fill prog-seed-low';
+    const rLabel = t.ratio > 0 ? t.ratio.toFixed(3) : '0.000';
+    return `<div class="prog-wrap"><div class="prog-bar"><div class="${rCls}" style="width:${rPct}%"></div></div><span class="prog-pct">${rLabel}</span></div>`;
+  }
+  const fc = fillClass(t.state);
+  const pct = t.progress.toFixed(1);
+  return `<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div><span class="prog-pct">${pct}%</span></div>`;
+}
+
+const COLUMNS = [
+  { key: 'name',           label: 'Name',     render: t => `<td class="name" title="${esc(t.name)}">${esc(t.name)}</td>` },
+  { key: 'priority',       label: 'Priority', render: t => { const p = t.priority||'normal'; return `<td><span class="badge prio-${p}">${priorityLabel(p)}</span></td>`; } },
+  { key: 'size',           label: 'Size',     render: t => `<td class="num">${fmtSize(t.size)}</td>` },
+  { key: 'state',          label: 'Status',   render: t => `<td><span class="badge ${badgeClass(t.state)}">${esc(t.state)}</span></td>` },
+  { key: 'progress',       label: 'Progress', render: t => `<td class="prog-cell">${buildProgCell(t)}</td>` },
+  { key: 'download_speed', label: '↓ Speed',  render: t => `<td class="num">${fmtSpeed(t.download_speed)}</td>` },
+  { key: 'upload_speed',   label: '↑ Speed',  render: t => `<td class="num">${fmtSpeed(t.upload_speed)}</td>` },
+  { key: 'uploaded',       label: '↑ Total',  render: t => `<td class="num">${fmtSize(t.uploaded)}</td>` },
+  { key: 'ratio',          label: 'Ratio',    render: t => `<td class="ratio-cell">${renderRatio(t.ratio)}</td>` },
+  { key: 'eta',            label: 'ETA',      render: t => `<td class="num">${fmtEta(t.eta)}</td>` },
+];
+
+const COL_MAP = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
+const DEFAULT_COL_ORDER = COLUMNS.map(c => c.key);
+
+function loadColumnOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('col-order') || 'null');
+    if (Array.isArray(saved)) {
+      const valid = saved.filter(k => COL_MAP[k]);
+      const missing = DEFAULT_COL_ORDER.filter(k => !valid.includes(k));
+      return [...valid, ...missing];
+    }
+  } catch {}
+  return [...DEFAULT_COL_ORDER];
+}
+
+function saveColumnOrder() {
+  localStorage.setItem('col-order', JSON.stringify(columnOrder));
+}
+
 function badgeClass(state) {
   const map = {
     'Downloading': 'dl',
@@ -83,6 +130,8 @@ let pollTimer = null;
 let selectedFile = null;
 let detailId = null;
 let detailTab = 'general';
+let columnOrder = loadColumnOrder();
+let _colDragSrc = null;
 
 // ── API ─────────────────────────────────────────────────────────────────────
 
@@ -160,6 +209,65 @@ function updateSidebar() {
 
 // ── table rendering ─────────────────────────────────────────────────────────
 
+function renderHeaders() {
+  const tr = document.querySelector('thead tr');
+  tr.querySelectorAll('th:not(.chk)').forEach(th => th.remove());
+
+  columnOrder.forEach(key => {
+    const col = COL_MAP[key];
+    if (!col) return;
+    const th = document.createElement('th');
+    th.dataset.sort = key;
+    th.draggable = true;
+    th.textContent = col.label;
+    if (sortKey === key) th.classList.add('active-sort');
+
+    th.addEventListener('click', () => {
+      if (_colDragSrc !== null) return;
+      if (sortKey === key) sortAsc = !sortAsc;
+      else { sortKey = key; sortAsc = true; }
+      document.querySelectorAll('thead th').forEach(t => t.classList.remove('active-sort'));
+      th.classList.add('active-sort');
+      renderTable();
+    });
+
+    th.addEventListener('dragstart', e => {
+      _colDragSrc = key;
+      e.dataTransfer.effectAllowed = 'move';
+      th.classList.add('col-dragging');
+    });
+    th.addEventListener('dragend', () => {
+      th.classList.remove('col-dragging');
+      document.querySelectorAll('thead th').forEach(t => t.classList.remove('col-drag-over'));
+      setTimeout(() => { _colDragSrc = null; }, 0);
+    });
+    th.addEventListener('dragover', e => {
+      if (!_colDragSrc || _colDragSrc === key) return;
+      e.preventDefault();
+      document.querySelectorAll('thead th').forEach(t => t.classList.remove('col-drag-over'));
+      th.classList.add('col-drag-over');
+    });
+    th.addEventListener('dragleave', () => th.classList.remove('col-drag-over'));
+    th.addEventListener('drop', e => {
+      e.preventDefault();
+      th.classList.remove('col-drag-over');
+      if (_colDragSrc && _colDragSrc !== key) {
+        const from = columnOrder.indexOf(_colDragSrc);
+        const to = columnOrder.indexOf(key);
+        if (from !== -1 && to !== -1) {
+          columnOrder.splice(from, 1);
+          columnOrder.splice(to, 0, _colDragSrc);
+          saveColumnOrder();
+          renderHeaders();
+          renderTable();
+        }
+      }
+    });
+
+    tr.appendChild(th);
+  });
+}
+
 function filteredTorrents() {
   let list = torrents;
   if (filterCategory !== 'all') {
@@ -192,47 +300,17 @@ function renderTable() {
   const list = filteredTorrents();
 
   if (!list.length) {
-    tbody.innerHTML = '<tr class="no-data"><td colspan="11">No torrents in this view</td></tr>';
+    tbody.innerHTML = `<tr class="no-data"><td colspan="${columnOrder.length + 1}">No torrents in this view</td></tr>`;
     updateToolbarButtons();
     return;
   }
 
   const rows = list.map(t => {
     const sel = selected.has(t.id) ? 'selected' : '';
-    const bc = badgeClass(t.state);
-    const fc = fillClass(t.state);
-    const pct = t.progress.toFixed(1);
-    const prio = t.priority || 'normal';
-    const isSeeding = t.state === 'Seeding' || t.state === 'Finished';
-
-    let progCell;
-    if (isSeeding) {
-      const rPct = Math.min(t.ratio * 100, 100).toFixed(1);
-      const rCls = t.ratio >= 1.0 ? 'prog-fill prog-seed-good' : 'prog-fill prog-seed-low';
-      const rLabel = t.ratio > 0 ? t.ratio.toFixed(3) : '0.000';
-      progCell = `<div class="prog-wrap">
-        <div class="prog-bar"><div class="${rCls}" style="width:${rPct}%"></div></div>
-        <span class="prog-pct">${rLabel}</span>
-      </div>`;
-    } else {
-      progCell = `<div class="prog-wrap">
-        <div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div>
-        <span class="prog-pct">${pct}%</span>
-      </div>`;
-    }
-
+    const cells = columnOrder.map(key => COL_MAP[key]?.render(t) ?? '').join('');
     return `<tr class="${sel}" data-id="${t.id}" onclick="rowClick(event,'${t.id}')" oncontextmenu="rowCtx(event,'${t.id}')">
       <td class="chk"><input type="checkbox" ${selected.has(t.id) ? 'checked' : ''} onclick="chkClick(event,'${t.id}')"></td>
-      <td class="name" title="${esc(t.name)}">${esc(t.name)}</td>
-      <td><span class="badge prio-${prio}">${priorityLabel(prio)}</span></td>
-      <td class="num">${fmtSize(t.size)}</td>
-      <td><span class="badge ${bc}">${esc(t.state)}</span></td>
-      <td class="prog-cell">${progCell}</td>
-      <td class="num">${fmtSpeed(t.download_speed)}</td>
-      <td class="num">${fmtSpeed(t.upload_speed)}</td>
-      <td class="num">${fmtSize(t.uploaded)}</td>
-      <td class="ratio-cell">${renderRatio(t.ratio)}</td>
-      <td class="num">${fmtEta(t.eta)}</td>
+      ${cells}
     </tr>`;
   });
 
@@ -345,16 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  document.querySelectorAll('thead th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
-      const key = th.dataset.sort;
-      if (sortKey === key) sortAsc = !sortAsc;
-      else { sortKey = key; sortAsc = true; }
-      document.querySelectorAll('thead th').forEach(t => t.classList.remove('active-sort'));
-      th.classList.add('active-sort');
-      renderTable();
-    });
-  });
+  renderHeaders();
 
   document.getElementById('select-all').addEventListener('change', toggleSelectAll);
 

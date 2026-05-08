@@ -150,6 +150,9 @@ td.num { text-align: right; }
 /* progress bar */
 .prog-seed-low  { background: linear-gradient(90deg, #fb923c, #f97316); }
 .prog-seed-good { background: linear-gradient(90deg, #22c55e, #16a34a); }
+thead th[draggable] { cursor: grab; user-select: none; }
+thead th.col-dragging { opacity: .45; }
+thead th.col-drag-over { box-shadow: inset -3px 0 0 var(--accent); }
 .ratio-cell { min-width: 90px; }
 .ratio-wrap { display: flex; align-items: center; gap: 6px; }
 .ratio-bar  { flex: 1; height: 6px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }
