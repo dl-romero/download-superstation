@@ -44,11 +44,10 @@ function renderRatio(r) {
 
 function buildProgCell(t) {
   const isSeeding = t.state === 'Seeding' || t.state === 'Finished';
-  if (isSeeding) {
+  if (isSeeding && t.ratio > 0) {
     const rPct = Math.min(t.ratio * 100, 100).toFixed(1);
     const rCls = t.ratio >= 1.0 ? 'prog-fill prog-seed-good' : 'prog-fill prog-seed-low';
-    const rLabel = t.ratio > 0 ? t.ratio.toFixed(3) : '0.000';
-    return `<div class="prog-wrap"><div class="prog-bar"><div class="${rCls}" style="width:${rPct}%"></div></div><span class="prog-pct">${rLabel}</span></div>`;
+    return `<div class="prog-wrap"><div class="prog-bar"><div class="${rCls}" style="width:${rPct}%"></div></div><span class="prog-pct">${t.ratio.toFixed(3)}</span></div>`;
   }
   const fc = fillClass(t.state);
   const pct = t.progress.toFixed(1);
