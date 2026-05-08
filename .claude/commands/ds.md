@@ -102,6 +102,12 @@ The original code was missing index 0, causing every state label to be wrong (Do
 - Passed to templates as `v=_STATIC_VER`
 - CSS and JS URLs include `?v={{ v }}` so browsers always fetch fresh assets after a deploy
 
+### About modal — version display
+- `/api/version` (GET, login required) returns `{commit: "<short hash>", date: "YYYY-MM-DD"}`
+- When the ℹ button is clicked, JS immediately opens the modal then fires `apiFetch('/api/version')` and fills `#info-version` and `#info-date` spans
+- The modal shows: Author, Website, Repository, **Version** (short git hash), **Released** (commit date)
+- Values display as `—` until the fetch resolves, so the modal opens instantly without waiting
+
 ---
 
 ## Data Files (`~/.download-superstation/`)
