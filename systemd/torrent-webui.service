@@ -1,0 +1,17 @@
+[Unit]
+Description=Download Superstation torrent web UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dromero
+WorkingDirectory=/opt/torrent-webui
+ExecStart=/opt/torrent-webui/venv/bin/python /opt/torrent-webui/app.py
+Restart=on-failure
+RestartSec=5
+# Override any of these with an EnvironmentFile or drop-in if needed
+Environment=PORT=5005
+
+[Install]
+WantedBy=multi-user.target

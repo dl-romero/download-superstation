@@ -321,7 +321,11 @@ def trigger_update():
         import time
         time.sleep(1.5)
         manager.shutdown()
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        # Exit with code 1 so systemd (Restart=on-failure) brings the service
+        # back up with the freshly-written code. os.execv was previously used
+        # here but the new Flask process inherits the listening socket FD and
+        # fails to bind, and any exec errors are silently swallowed in a thread.
+        os._exit(1)
 
     threading.Thread(target=_restart, daemon=True).start()
     return jsonify({'status': 'updated', 'message': 'Update applied. Restarting…'})
