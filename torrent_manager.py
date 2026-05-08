@@ -142,20 +142,41 @@ class TorrentManager:
 
     def _load_saved_torrents(self):
         meta_path = self._meta_file()
-        if not meta_path.exists():
-            return
-        try:
-            with open(meta_path) as f:
-                meta = json.load(f)
-        except Exception as e:
-            print(f'[torrent] could not read meta: {e}')
-            return
+        loaded_hashes: set[str] = set()
 
-        for entry in meta.get('torrents', []):
+        if meta_path.exists():
             try:
-                self._restore_entry(entry)
+                with open(meta_path) as f:
+                    meta = json.load(f)
             except Exception as e:
-                print(f'[torrent] restore failed for {entry.get("id", "?")}: {e}')
+                print(f'[torrent] could not read meta: {e}')
+                meta = {'torrents': []}
+
+            for entry in meta.get('torrents', []):
+                ih = entry.get('id', '')
+                if ih:
+                    loaded_hashes.add(ih)
+                try:
+                    self._restore_entry(entry)
+                except Exception as e:
+                    print(f'[torrent] restore failed for {entry.get("id", "?")}: {e}')
+
+        # Recover any .resume files not referenced in meta.json.
+        # This handles torrents lost when meta.json was wiped after a bad restart.
+        for resume_file in self.data_path.glob('*.resume'):
+            ih = resume_file.stem
+            if ih in loaded_hashes:
+                continue
+            try:
+                with open(resume_file, 'rb') as f:
+                    params = lt.read_resume_data(f.read())
+                if not params.save_path:
+                    params.save_path = str(self.download_path)
+                self.session.add_torrent(params)
+                self._priorities.setdefault(ih, 'normal')
+                print(f'[torrent] recovered from resume file: {ih[:8]}…')
+            except Exception as e:
+                print(f'[torrent] could not recover {ih[:8]}: {e}')
 
     def _restore_entry(self, entry: dict):
         info_hash = entry['id']
@@ -184,6 +205,10 @@ class TorrentManager:
                 params = lt.parse_magnet_uri(magnet)
                 params.save_path = save_path
             self._magnets[info_hash] = magnet
+        elif resume_path.exists():
+            with open(resume_path, 'rb') as f:
+                params = lt.read_resume_data(f.read())
+            params.save_path = save_path
         else:
             return
 
