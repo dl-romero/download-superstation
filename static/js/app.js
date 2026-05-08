@@ -203,6 +203,23 @@ function renderTable() {
     const fc = fillClass(t.state);
     const pct = t.progress.toFixed(1);
     const prio = t.priority || 'normal';
+    const isSeeding = t.state === 'Seeding' || t.state === 'Finished';
+
+    let progCell;
+    if (isSeeding) {
+      const rPct = Math.min(t.ratio * 100, 100).toFixed(1);
+      const rCls = t.ratio >= 1.0 ? 'prog-fill prog-seed-good' : 'prog-fill prog-seed-low';
+      const rLabel = t.ratio > 0 ? t.ratio.toFixed(3) : '0.000';
+      progCell = `<div class="prog-wrap">
+        <div class="prog-bar"><div class="${rCls}" style="width:${rPct}%"></div></div>
+        <span class="prog-pct">${rLabel}</span>
+      </div>`;
+    } else {
+      progCell = `<div class="prog-wrap">
+        <div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div>
+        <span class="prog-pct">${pct}%</span>
+      </div>`;
+    }
 
     return `<tr class="${sel}" data-id="${t.id}" onclick="rowClick(event,'${t.id}')" oncontextmenu="rowCtx(event,'${t.id}')">
       <td class="chk"><input type="checkbox" ${selected.has(t.id) ? 'checked' : ''} onclick="chkClick(event,'${t.id}')"></td>
@@ -210,12 +227,7 @@ function renderTable() {
       <td><span class="badge prio-${prio}">${priorityLabel(prio)}</span></td>
       <td class="num">${fmtSize(t.size)}</td>
       <td><span class="badge ${bc}">${esc(t.state)}</span></td>
-      <td class="prog-cell">
-        <div class="prog-wrap">
-          <div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div>
-          <span class="prog-pct">${pct}%</span>
-        </div>
-      </td>
+      <td class="prog-cell">${progCell}</td>
       <td class="num">${fmtSpeed(t.download_speed)}</td>
       <td class="num">${fmtSpeed(t.upload_speed)}</td>
       <td class="ratio-cell">${renderRatio(t.ratio)}</td>
