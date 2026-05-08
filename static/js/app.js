@@ -211,6 +211,7 @@ function updateSidebar() {
 
 function renderHeaders() {
   const tr = document.querySelector('thead tr');
+  if (!tr) return;
   tr.querySelectorAll('th:not(.chk)').forEach(th => th.remove());
 
   columnOrder.forEach(key => {
@@ -423,8 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  renderHeaders();
-
   document.getElementById('select-all').addEventListener('change', toggleSelectAll);
 
   document.getElementById('btn-add').addEventListener('click', openAddModal);
@@ -435,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // close context menu on outside click
   document.addEventListener('click', () => closeCtxMenu());
 
+  renderHeaders();
   fetchTorrents();
   pollTimer = setInterval(fetchTorrents, 2000);
 });

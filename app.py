@@ -289,7 +289,7 @@ def trigger_update():
         return jsonify({'status': 'up_to_date', 'message': 'Already up to date.'})
 
     try:
-        subprocess.run(['git', 'pull', 'origin', 'main'],
+        subprocess.run(['git', 'reset', '--hard', 'origin/main'],
                        cwd=_APP_DIR, check=True, capture_output=True)
         pip = _APP_DIR / 'venv' / 'bin' / 'pip'
         if pip.exists():
