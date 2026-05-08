@@ -806,12 +806,13 @@ async function saveSettings() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('ctx-pause').addEventListener('click', () => { onPause(); closeCtxMenu(); });
   document.getElementById('ctx-resume').addEventListener('click', () => { onResume(); closeCtxMenu(); });
-  document.getElementById('ctx-delete').addEventListener('click', () => { onDelete(); closeCtxMenu(); });
+  document.getElementById('ctx-delete').addEventListener('click', () => {
+    const ids = [...selected]; closeCtxMenu();
+    removeTorrents(ids, false).catch(err => alert('Remove failed: ' + err.message));
+  });
   document.getElementById('ctx-delete-files').addEventListener('click', () => {
-    const n = selected.size;
-    if (!confirm(`Permanently delete ${n} torrent${n > 1 ? 's' : ''} AND all downloaded files?`)) return;
-    removeTorrents([...selected], true);
-    closeCtxMenu();
+    const ids = [...selected]; closeCtxMenu();
+    removeTorrents(ids, true).catch(err => alert('Delete failed: ' + err.message));
   });
 
   for (const p of ['high', 'normal', 'low']) {

@@ -5,6 +5,16 @@ import time
 import json
 from pathlib import Path
 
+# Resolve the delete-files flag once at import time — the attribute path changed
+# across libtorrent Python binding versions.
+try:
+    _LT_DELETE_FILES = lt.remove_flags_t.delete_files
+except AttributeError:
+    try:
+        _LT_DELETE_FILES = lt.torrent_handle.delete_files
+    except AttributeError:
+        _LT_DELETE_FILES = 1  # integer fallback (value is always 1)
+
 
 def _s(value) -> str:
     """Safely convert libtorrent string fields — some return bytes in Python 3."""
@@ -407,7 +417,7 @@ class TorrentManager:
     def remove_torrent(self, info_hash: str, delete_files: bool = False) -> bool:
         for h in self.session.get_torrents():
             if self._get_id(h) == info_hash:
-                flags = lt.remove_flags_t.delete_files if delete_files else 0
+                flags = _LT_DELETE_FILES if delete_files else 0
                 self.session.remove_torrent(h, flags)
                 for p in (self._torrent_file(info_hash), self._resume_file(info_hash)):
                     if p.exists():

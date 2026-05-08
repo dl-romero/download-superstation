@@ -227,7 +227,10 @@ def resume_torrent(info_hash):
 @login_required
 def remove_torrent(info_hash):
     delete_files = request.args.get('delete_files', 'false').lower() == 'true'
-    return jsonify({'ok': manager.remove_torrent(info_hash, delete_files)})
+    try:
+        return jsonify({'ok': manager.remove_torrent(info_hash, delete_files)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @app.route('/api/torrents/<info_hash>/priority', methods=['POST'])
