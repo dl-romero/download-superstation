@@ -125,12 +125,13 @@ table { width: 100%; border-collapse: collapse; table-layout: auto; }
 thead { position: sticky; top: 0; z-index: 2; }
 thead th {
   background: var(--tbl-hdr); border-bottom: 2px solid var(--border);
-  padding: 6px 8px; text-align: left; font-weight: 600; font-size: 12px;
+  padding: 6px 8px; text-align: center; font-weight: 600; font-size: 12px;
   color: var(--text-dim); white-space: nowrap; user-select: none; cursor: pointer;
 }
 thead th:hover { background: #d8dce5; color: var(--text); }
 thead th.active-sort { color: var(--accent); }
 thead th:first-child { width: 34px; cursor: default; text-align: center; }
+thead th[data-sort="name"] { text-align: left; }
 
 tbody tr { border-bottom: 1px solid #eef0f4; }
 tbody tr:nth-child(even) { background: var(--tbl-alt); }
