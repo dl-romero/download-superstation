@@ -192,7 +192,7 @@ function renderTable() {
   const list = filteredTorrents();
 
   if (!list.length) {
-    tbody.innerHTML = '<tr class="no-data"><td colspan="10">No torrents in this view</td></tr>';
+    tbody.innerHTML = '<tr class="no-data"><td colspan="11">No torrents in this view</td></tr>';
     updateToolbarButtons();
     return;
   }
@@ -230,6 +230,7 @@ function renderTable() {
       <td class="prog-cell">${progCell}</td>
       <td class="num">${fmtSpeed(t.download_speed)}</td>
       <td class="num">${fmtSpeed(t.upload_speed)}</td>
+      <td class="num">${fmtSize(t.uploaded)}</td>
       <td class="ratio-cell">${renderRatio(t.ratio)}</td>
       <td class="num">${fmtEta(t.eta)}</td>
     </tr>`;
