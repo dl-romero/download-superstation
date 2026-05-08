@@ -121,7 +121,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui,
 /* table container */
 .table-wrap { flex: 1; overflow-y: auto; overflow-x: auto; background: #fff; }
 
-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+table { width: 100%; border-collapse: collapse; table-layout: auto; }
 thead { position: sticky; top: 0; z-index: 2; }
 thead th {
   background: var(--tbl-hdr); border-bottom: 2px solid var(--border);
@@ -144,8 +144,8 @@ td {
   text-overflow: ellipsis; white-space: nowrap;
 }
 td.chk { text-align: center; width: 34px; }
-td.name { font-weight: 500; }
-td.num { text-align: right; }
+td.name { font-weight: 500; min-width: 160px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+td.num  { text-align: right; white-space: nowrap; }
 
 /* progress bar */
 .prog-seed-low  { background: linear-gradient(90deg, #fb923c, #f97316); }
