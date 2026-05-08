@@ -33,6 +33,13 @@ else:
 
 manager = TorrentManager(DOWNLOAD_PATH, DATA_PATH)
 
+try:
+    _STATIC_VER = subprocess.check_output(
+        ['git', 'rev-parse', '--short', 'HEAD'], cwd=Path(__file__).parent
+    ).decode().strip()
+except Exception:
+    _STATIC_VER = '0'
+
 
 # ── auth helpers ─────────────────────────────────────────────────────────────
 
@@ -88,7 +95,7 @@ signal.signal(signal.SIGTERM, _shutdown)
 def login_page():
     if session.get('logged_in'):
         return redirect('/')
-    return render_template('login.html')
+    return render_template('login.html', v=_STATIC_VER)
 
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -129,7 +136,7 @@ def change_password():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', v=_STATIC_VER)
 
 
 # ── API ───────────────────────────────────────────────────────────────────────
