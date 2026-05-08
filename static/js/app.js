@@ -551,9 +551,13 @@ function rowCtx(e, id) {
   const t = torrents.find(t => t.id === id);
   document.getElementById('ctx-pause').style.display = (t && !t.paused) ? '' : 'none';
   document.getElementById('ctx-resume').style.display = (t && t.paused) ? '' : 'none';
-  menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
-  menu.style.top = Math.min(e.clientY, window.innerHeight - 140) + 'px';
+  // Position at cursor then nudge inward if the menu would clip the viewport.
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
   menu.classList.add('open');
+  const rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth)   menu.style.left = Math.max(0, e.clientX - rect.width)  + 'px';
+  if (rect.bottom > window.innerHeight) menu.style.top  = Math.max(0, e.clientY - rect.height) + 'px';
 }
 
 function closeCtxMenu() {
