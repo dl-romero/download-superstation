@@ -34,11 +34,17 @@ else:
 manager = TorrentManager(DOWNLOAD_PATH, DATA_PATH)
 
 try:
-    _STATIC_VER = subprocess.check_output(
+    _GIT_HASH = subprocess.check_output(
         ['git', 'rev-parse', '--short', 'HEAD'], cwd=Path(__file__).parent
     ).decode().strip()
+    _GIT_DATE = subprocess.check_output(
+        ['git', 'log', '-1', '--format=%ci'], cwd=Path(__file__).parent
+    ).decode().strip()[:10]
 except Exception:
-    _STATIC_VER = '0'
+    _GIT_HASH = '0'
+    _GIT_DATE = 'unknown'
+
+_STATIC_VER = _GIT_HASH
 
 
 # ── auth helpers ─────────────────────────────────────────────────────────────
@@ -140,6 +146,12 @@ def index():
 
 
 # ── API ───────────────────────────────────────────────────────────────────────
+
+@app.route('/api/version')
+@login_required
+def get_version():
+    return jsonify({'commit': _GIT_HASH, 'date': _GIT_DATE})
+
 
 @app.route('/api/torrents')
 @login_required

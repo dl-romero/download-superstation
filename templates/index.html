@@ -88,6 +88,16 @@
           <thead>
             <tr>
               <th class="chk"><input type="checkbox" id="select-all"></th>
+              <th draggable="true" data-sort="name">Name</th>
+              <th draggable="true" data-sort="priority">Priority</th>
+              <th draggable="true" data-sort="size">Size</th>
+              <th draggable="true" data-sort="state">Status</th>
+              <th draggable="true" data-sort="progress">Progress</th>
+              <th draggable="true" data-sort="download_speed">↓ Speed</th>
+              <th draggable="true" data-sort="upload_speed">↑ Speed</th>
+              <th draggable="true" data-sort="uploaded">↑ Total</th>
+              <th draggable="true" data-sort="ratio">Ratio</th>
+              <th draggable="true" data-sort="eta">ETA</th>
             </tr>
           </thead>
           <tbody id="torrent-tbody">
@@ -374,6 +384,14 @@
         <div class="info-row">
           <span class="info-label">Repository</span>
           <a class="info-link" href="https://github.com/dl-romero/download-superstation" target="_blank" rel="noopener">github.com/dl-romero/download-superstation</a>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Version</span>
+          <span class="info-value" id="info-version">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Released</span>
+          <span class="info-value" id="info-date">—</span>
         </div>
       </div>
       <div class="info-divider" style="margin-top:16px;"></div>

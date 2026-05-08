@@ -69,22 +69,70 @@ const COLUMNS = [
 ];
 
 const COL_MAP = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
-const DEFAULT_COL_ORDER = COLUMNS.map(c => c.key);
 
-function loadColumnOrder() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('col-order') || 'null');
-    if (Array.isArray(saved)) {
-      const valid = saved.filter(k => COL_MAP[k]);
-      const missing = DEFAULT_COL_ORDER.filter(k => !valid.includes(k));
-      return [...valid, ...missing];
-    }
-  } catch {}
-  return [...DEFAULT_COL_ORDER];
+function getColumnOrder() {
+  return [...document.querySelectorAll('thead th[data-sort]')].map(th => th.dataset.sort);
 }
 
 function saveColumnOrder() {
-  localStorage.setItem('col-order', JSON.stringify(columnOrder));
+  localStorage.setItem('col-order', JSON.stringify(getColumnOrder()));
+}
+
+function applyColumnOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('col-order') || 'null');
+    if (!Array.isArray(saved) || !saved.length) return;
+    const tr = document.querySelector('thead tr');
+    if (!tr) return;
+    const thMap = {};
+    tr.querySelectorAll('th[data-sort]').forEach(th => { thMap[th.dataset.sort] = th; });
+    // Remove all sortable ths then re-append in saved order
+    Object.values(thMap).forEach(th => th.remove());
+    saved.forEach(key => { if (thMap[key]) tr.appendChild(thMap[key]); });
+    // Append any new columns not in saved order
+    Object.keys(thMap).forEach(key => { if (!saved.includes(key)) tr.appendChild(thMap[key]); });
+  } catch {}
+}
+
+function initColumnDrag() {
+  let _dragSrc = null;
+  document.querySelectorAll('thead th[data-sort]').forEach(th => {
+    th.addEventListener('dragstart', e => {
+      _dragSrc = th;
+      e.dataTransfer.effectAllowed = 'move';
+      th.classList.add('col-dragging');
+    });
+    th.addEventListener('dragend', () => {
+      th.classList.remove('col-dragging');
+      document.querySelectorAll('thead th').forEach(t => t.classList.remove('col-drag-over'));
+      setTimeout(() => { _dragSrc = null; }, 0);
+    });
+    th.addEventListener('dragover', e => {
+      if (!_dragSrc || _dragSrc === th) return;
+      e.preventDefault();
+      document.querySelectorAll('thead th').forEach(t => t.classList.remove('col-drag-over'));
+      th.classList.add('col-drag-over');
+    });
+    th.addEventListener('dragleave', () => th.classList.remove('col-drag-over'));
+    th.addEventListener('drop', e => {
+      e.preventDefault();
+      th.classList.remove('col-drag-over');
+      if (_dragSrc && _dragSrc !== th) {
+        th.parentNode.insertBefore(_dragSrc, th);
+        saveColumnOrder();
+        renderTable();
+      }
+    });
+    th.addEventListener('click', () => {
+      if (_dragSrc) return;
+      const key = th.dataset.sort;
+      if (sortKey === key) sortAsc = !sortAsc;
+      else { sortKey = key; sortAsc = true; }
+      document.querySelectorAll('thead th').forEach(t => t.classList.remove('active-sort'));
+      th.classList.add('active-sort');
+      renderTable();
+    });
+  });
 }
 
 function badgeClass(state) {
@@ -130,8 +178,6 @@ let pollTimer = null;
 let selectedFile = null;
 let detailId = null;
 let detailTab = 'general';
-let columnOrder = loadColumnOrder();
-let _colDragSrc = null;
 
 // ── API ─────────────────────────────────────────────────────────────────────
 
@@ -209,65 +255,6 @@ function updateSidebar() {
 
 // ── table rendering ─────────────────────────────────────────────────────────
 
-function renderHeaders() {
-  const tr = document.querySelector('thead tr');
-  if (!tr) return;
-  tr.querySelectorAll('th:not(.chk)').forEach(th => th.remove());
-
-  columnOrder.forEach(key => {
-    const col = COL_MAP[key];
-    if (!col) return;
-    const th = document.createElement('th');
-    th.dataset.sort = key;
-    th.draggable = true;
-    th.textContent = col.label;
-    if (sortKey === key) th.classList.add('active-sort');
-
-    th.addEventListener('click', () => {
-      if (_colDragSrc !== null) return;
-      if (sortKey === key) sortAsc = !sortAsc;
-      else { sortKey = key; sortAsc = true; }
-      document.querySelectorAll('thead th').forEach(t => t.classList.remove('active-sort'));
-      th.classList.add('active-sort');
-      renderTable();
-    });
-
-    th.addEventListener('dragstart', e => {
-      _colDragSrc = key;
-      e.dataTransfer.effectAllowed = 'move';
-      th.classList.add('col-dragging');
-    });
-    th.addEventListener('dragend', () => {
-      th.classList.remove('col-dragging');
-      document.querySelectorAll('thead th').forEach(t => t.classList.remove('col-drag-over'));
-      setTimeout(() => { _colDragSrc = null; }, 0);
-    });
-    th.addEventListener('dragover', e => {
-      if (!_colDragSrc || _colDragSrc === key) return;
-      e.preventDefault();
-      document.querySelectorAll('thead th').forEach(t => t.classList.remove('col-drag-over'));
-      th.classList.add('col-drag-over');
-    });
-    th.addEventListener('dragleave', () => th.classList.remove('col-drag-over'));
-    th.addEventListener('drop', e => {
-      e.preventDefault();
-      th.classList.remove('col-drag-over');
-      if (_colDragSrc && _colDragSrc !== key) {
-        const from = columnOrder.indexOf(_colDragSrc);
-        const to = columnOrder.indexOf(key);
-        if (from !== -1 && to !== -1) {
-          columnOrder.splice(from, 1);
-          columnOrder.splice(to, 0, _colDragSrc);
-          saveColumnOrder();
-          renderHeaders();
-          renderTable();
-        }
-      }
-    });
-
-    tr.appendChild(th);
-  });
-}
 
 function filteredTorrents() {
   let list = torrents;
@@ -300,15 +287,17 @@ function renderTable() {
   const tbody = document.getElementById('torrent-tbody');
   const list = filteredTorrents();
 
+  const colOrder = getColumnOrder();
+
   if (!list.length) {
-    tbody.innerHTML = `<tr class="no-data"><td colspan="${columnOrder.length + 1}">No torrents in this view</td></tr>`;
+    tbody.innerHTML = `<tr class="no-data"><td colspan="${colOrder.length + 1}">No torrents in this view</td></tr>`;
     updateToolbarButtons();
     return;
   }
 
   const rows = list.map(t => {
     const sel = selected.has(t.id) ? 'selected' : '';
-    const cells = columnOrder.map(key => COL_MAP[key]?.render(t) ?? '').join('');
+    const cells = colOrder.map(key => COL_MAP[key]?.render(t) ?? '').join('');
     return `<tr class="${sel}" data-id="${t.id}" onclick="rowClick(event,'${t.id}')" oncontextmenu="rowCtx(event,'${t.id}')">
       <td class="chk"><input type="checkbox" ${selected.has(t.id) ? 'checked' : ''} onclick="chkClick(event,'${t.id}')"></td>
       ${cells}
@@ -434,7 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // close context menu on outside click
   document.addEventListener('click', () => closeCtxMenu());
 
-  renderHeaders();
+  applyColumnOrder();
+  initColumnDrag();
   fetchTorrents();
   pollTimer = setInterval(fetchTorrents, 2000);
 });
@@ -696,8 +686,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btn-info').addEventListener('click', () =>
-    document.getElementById('info-modal').classList.add('open'));
+  document.getElementById('btn-info').addEventListener('click', () => {
+    document.getElementById('info-modal').classList.add('open');
+    apiFetch('/api/version').then(d => {
+      document.getElementById('info-version').textContent = d.commit;
+      document.getElementById('info-date').textContent = d.date;
+    }).catch(() => {});
+  });
   document.getElementById('info-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeInfoModal();
   });
