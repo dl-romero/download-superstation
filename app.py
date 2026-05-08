@@ -301,6 +301,7 @@ def trigger_update():
     def _restart():
         import time
         time.sleep(1.5)
+        manager.shutdown()
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
     threading.Thread(target=_restart, daemon=True).start()

@@ -63,6 +63,7 @@ class TorrentManager:
         self.session = lt.session(lt_settings)
         self._lock = threading.Lock()
         self._priorities: dict[str, str] = {}   # info_hash -> 'high'|'normal'|'low'
+        self._magnets:    dict[str, str] = {}   # info_hash -> original magnet URI
         self._load_saved_torrents()
         self._start_background_saver()
 
@@ -174,12 +175,15 @@ class TorrentManager:
                 params.ti = lt.torrent_info(str(torrent_path))
                 params.save_path = save_path
         elif entry.get('magnet'):
-            params = lt.parse_magnet_uri(entry['magnet'])
-            params.save_path = save_path
+            magnet = entry['magnet']
             if resume_path.exists():
                 with open(resume_path, 'rb') as f:
-                    rd = lt.read_resume_data(f.read())
-                params.resume_data = rd.resume_data
+                    params = lt.read_resume_data(f.read())
+                params.save_path = save_path
+            else:
+                params = lt.parse_magnet_uri(magnet)
+                params.save_path = save_path
+            self._magnets[info_hash] = magnet
         else:
             return
 
@@ -204,8 +208,12 @@ class TorrentManager:
                 'save_path': st.save_path,
                 'priority': self._priorities.get(ih, 'normal'),
             }
-            if not self._torrent_file(ih).exists() and st.name:
-                entry['name'] = st.name
+            if not self._torrent_file(ih).exists():
+                if st.name:
+                    entry['name'] = st.name
+                magnet = self._magnets.get(ih)
+                if magnet:
+                    entry['magnet'] = magnet
             entries.append(entry)
 
         with open(self._meta_file(), 'w') as f:
@@ -311,6 +319,7 @@ class TorrentManager:
 
         info_hash = self._get_id(handle)
         self._priorities.setdefault(info_hash, 'normal')
+        self._magnets[info_hash] = magnet_uri
         self._save_meta()
         return info_hash
 
