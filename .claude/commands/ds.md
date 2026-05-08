@@ -167,6 +167,8 @@ python app.py
 ### Deploy to pikachu
 The preferred flow is commit → push → use in-app "Check for Updates" on pikachu.
 
+> **Gotcha:** CSS, JS, and HTML are served as static files and take effect immediately after a git pull/reset. Python changes (`app.py`, `torrent_manager.py`) require a process restart to take effect. If a new API route returns 404 after an update, the service just needs a restart: `sudo systemctl restart torrent-webui`.
+
 For emergency direct deploys (avoid — dirties the working tree):
 ```bash
 rsync -av --exclude='.git' --exclude='venv' --exclude='__pycache__' \
