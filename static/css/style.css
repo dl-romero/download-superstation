@@ -142,11 +142,11 @@ tbody tr.no-data td {
 }
 td {
   padding: 6px 8px; font-size: 12px; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
+  text-overflow: ellipsis; white-space: nowrap; text-align: center;
 }
-td.chk { text-align: center; width: 34px; }
-td.name { font-weight: 500; min-width: 160px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
-td.num  { text-align: right; white-space: nowrap; }
+td.chk  { text-align: center; width: 34px; }
+td.name { text-align: left; font-weight: 500; min-width: 160px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+td.num  { text-align: center; white-space: nowrap; }
 
 /* progress bar */
 .prog-seed-low  { background: linear-gradient(90deg, #fb923c, #f97316); }
