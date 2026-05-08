@@ -154,8 +154,8 @@ td.num  { text-align: center; white-space: nowrap; }
 thead th[draggable] { cursor: grab; user-select: none; }
 thead th.col-dragging { opacity: .45; }
 thead th.col-drag-over { box-shadow: inset -3px 0 0 var(--accent); }
-.ratio-cell { min-width: 90px; }
-.ratio-wrap { display: flex; align-items: center; gap: 6px; }
+.ratio-cell { min-width: 90px; text-align: left; }
+.ratio-wrap { display: flex; align-items: center; gap: 6px; width: 100%; }
 .ratio-bar  { flex: 1; height: 6px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }
 .ratio-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
 .ratio-fill-low  { background: linear-gradient(90deg, #f87171, #ef4444); }
@@ -164,8 +164,8 @@ thead th.col-drag-over { box-shadow: inset -3px 0 0 var(--accent); }
 .ratio-low  { color: #ef4444; }
 .ratio-good { color: #16a34a; }
 .ratio-none { color: var(--text-dim); font-size: 11px; }
-.prog-cell { min-width: 110px; }
-.prog-wrap { display: flex; align-items: center; gap: 6px; }
+.prog-cell { min-width: 110px; text-align: left; }
+.prog-wrap { display: flex; align-items: center; gap: 6px; width: 100%; }
 .prog-bar { flex: 1; height: 8px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }
 .prog-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
 .prog-fill.dl  { background: linear-gradient(90deg, #22c55e, #16a34a); }
