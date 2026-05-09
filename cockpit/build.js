@@ -11,6 +11,7 @@ const distDir = path.join(__dirname, 'dist');
 
 fs.mkdirSync(distDir, { recursive: true });
 fs.copyFileSync(path.join(srcDir, 'index.html'), path.join(distDir, 'index.html'));
+fs.copyFileSync(path.join(srcDir, 'app.css'),    path.join(distDir, 'app.css'));
 
 const ctx = {
   entryPoints: [path.join(srcDir, 'index.jsx')],

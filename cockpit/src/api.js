@@ -4,7 +4,7 @@ const SESSION_KEY = 'ds-session';
 const PORT_KEY    = 'ds-port';
 
 export function getPort() { return parseInt(localStorage.getItem(PORT_KEY) || '8080'); }
-export function setPort(p) { localStorage.setItem(PORT_KEY, String(p)); _http = null; }
+export function setPort(p) { localStorage.setItem(PORT_KEY, String(p)); resetHttp(); }
 
 let _http = null;
 

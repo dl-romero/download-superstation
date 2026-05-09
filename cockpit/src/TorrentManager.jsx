@@ -49,7 +49,7 @@ function badgeClass(state) {
   if (s.includes('check')) return 'ds-badge check';
   if (s === 'stalled' || s === 'stalledDL') return 'ds-badge stall';
   if (s === 'queued' || s.includes('queued')) return 'ds-badge meta';
-  if (s === 'metadata' || s === 'downloading metadata') return 'ds-badge meta';
+  if (s.includes('metadata')) return 'ds-badge meta';
   if (s === 'error' || s === 'missingfiles') return 'ds-badge err';
   return 'ds-badge';
 }
@@ -85,6 +85,7 @@ function FilePriorityModal({ torrent, onClose, onAuthError }) {
       })
       .catch(e => {
         if (e.status === 401) { onAuthError(); return; }
+        setFiles([]);
         setLoading(false);
       });
   }, []);
@@ -135,7 +136,7 @@ function FilePriorityModal({ torrent, onClose, onAuthError }) {
                   <tbody>
                     {files.map(f => (
                       <tr key={f.index}>
-                        <td style={{ wordBreak: 'break-all', fontSize: 11 }}>{f.name}</td>
+                        <td style={{ wordBreak: 'break-all', fontSize: 11 }}>{f.path}</td>
                         <td>{fmtSize(f.size)}</td>
                         <td>
                           <select
@@ -171,8 +172,8 @@ function FilePriorityModal({ torrent, onClose, onAuthError }) {
 
 // ── DeleteConfirmModal ────────────────────────────────────────────────────────
 
-function DeleteConfirmModal({ torrents, onConfirm, onClose }) {
-  const [deleteFiles, setDeleteFiles] = useState(false);
+function DeleteConfirmModal({ torrents, onConfirm, onClose, defaultDeleteFiles = false }) {
+  const [deleteFiles, setDeleteFiles] = useState(defaultDeleteFiles);
   const names = torrents.map(t => t.name);
   return (
     <div className="ds-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -235,10 +236,10 @@ function DetailPanel({ torrent, detail, tab, onTabChange }) {
                     <div className="ds-progress-wrap" style={{ flex: 1 }}>
                       <div
                         className={`ds-progress-bar ${badgeClass(torrent.state).replace('ds-badge ', '').replace('ds-badge', '')}`}
-                        style={{ width: `${Math.min(100, progress * 100)}%` }}
+                        style={{ width: `${Math.min(100, progress)}%` }}
                       />
                     </div>
-                    <span style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{(progress * 100).toFixed(1)}%</span>
+                    <span style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{progress.toFixed(1)}%</span>
                   </div>
                 </td>
               </tr>
@@ -262,8 +263,8 @@ function DetailPanel({ torrent, detail, tab, onTabChange }) {
               <tr><td>Download Speed</td><td>{fmtSpeed(torrent.download_speed)}</td></tr>
               <tr><td>Upload Speed</td><td>{fmtSpeed(torrent.upload_speed)}</td></tr>
               <tr><td>ETA</td><td>{fmtEta(torrent.eta)}</td></tr>
-              <tr><td>Seeds</td><td>{detail?.seeds_connected ?? '—'}{detail?.seeds_total ? ` / ${detail.seeds_total}` : ''}</td></tr>
-              <tr><td>Peers</td><td>{detail?.peers_connected ?? '—'}{detail?.peers_total ? ` / ${detail.peers_total}` : ''}</td></tr>
+              <tr><td>Seeds</td><td>{torrent.seeds ?? '—'}</td></tr>
+              <tr><td>Peers</td><td>{torrent.peers ?? '—'}</td></tr>
               <tr><td>Save Path</td><td style={{ wordBreak: 'break-all' }}>{detail?.save_path ?? torrent.save_path ?? '—'}</td></tr>
               <tr><td>Added</td><td>{fmtDate(torrent.added_on)}</td></tr>
               <tr><td>Completed</td><td>{fmtDate(torrent.completion_on)}</td></tr>
@@ -286,11 +287,11 @@ function DetailPanel({ torrent, detail, tab, onTabChange }) {
             <tbody>
               {detail?.peers?.length ? detail.peers.map((p, i) => (
                 <tr key={i}>
-                  <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{p.ip}:{p.port}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{p.ip}</td>
                   <td style={{ fontSize: 11 }}>{p.client}</td>
-                  <td>{fmtSpeed(p.dl_speed)}</td>
+                  <td>{fmtSpeed(p.down_speed)}</td>
                   <td>{fmtSpeed(p.up_speed)}</td>
-                  <td>{p.progress != null ? `${(p.progress * 100).toFixed(0)}%` : '—'}</td>
+                  <td>{p.progress != null ? `${p.progress.toFixed(0)}%` : '—'}</td>
                 </tr>
               )) : (
                 <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--pf-v5-global--Color--200)', padding: 16 }}>No peers</td></tr>
@@ -313,7 +314,7 @@ function DetailPanel({ torrent, detail, tab, onTabChange }) {
                 <tr key={i}>
                   <td style={{ fontSize: 11, wordBreak: 'break-all' }}>{t.url}</td>
                   <td style={{ fontSize: 11 }}>{t.status}</td>
-                  <td>{t.num_peers ?? '—'}</td>
+                  <td>{t.peers ?? '—'}</td>
                 </tr>
               )) : (
                 <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--pf-v5-global--Color--200)', padding: 16 }}>No trackers</td></tr>
@@ -344,7 +345,7 @@ const CATEGORIES = [
 function matchesCategory(t, cat) {
   if (cat === 'all') return true;
   const s = (t.state || '').toLowerCase();
-  if (cat === 'downloading') return s === 'downloading' || s === 'stalled' || s === 'stalledDL' || s === 'downloading metadata' || s === 'metadata';
+  if (cat === 'downloading') return s === 'downloading' || s === 'stalled' || s.includes('metadata');
   if (cat === 'seeding')     return s === 'seeding' || s === 'stalledup';
   if (cat === 'finished')    return s === 'finished' || s === 'pausedup' || s === 'stoppedup';
   if (cat === 'paused')      return s.includes('paused') || s.includes('stopped');
@@ -367,6 +368,7 @@ export default function TorrentManager({ onLogout, onAuthError }) {
   const [settingsOpen,    setSettingsOpen]    = useState(false);
   const [fileModalTorrent,setFileModalTorrent]= useState(null);
   const [deleteTargets,   setDeleteTargets]   = useState(null);
+  const [deleteFilesDefault, setDeleteFilesDefault] = useState(false);
   const [contextMenu,     setContextMenu]     = useState(null); // { x, y, torrent }
   const [error,           setError]           = useState('');
 
@@ -579,7 +581,7 @@ export default function TorrentManager({ onLogout, onAuthError }) {
           <button
             className="ds-btn sm danger"
             disabled={!anySelected}
-            onClick={() => setDeleteTargets(selectedTorrents)}
+            onClick={() => { setDeleteFilesDefault(false); setDeleteTargets(selectedTorrents); }}
           >✕ Remove</button>
           <div style={{ flex: 1 }} />
           <input
@@ -655,9 +657,9 @@ export default function TorrentManager({ onLogout, onAuthError }) {
                       <td>{stateLabel(t.state)}</td>
                       <td>
                         <div className="ds-progress-wrap">
-                          <div className={`ds-progress-bar ${stateKey}`} style={{ width: `${Math.min(100, prog * 100)}%` }} />
+                          <div className={`ds-progress-bar ${stateKey}`} style={{ width: `${Math.min(100, prog)}%` }} />
                         </div>
-                        <div className="ds-progress-pct">{(prog * 100).toFixed(1)}%</div>
+                        <div className="ds-progress-pct">{prog.toFixed(1)}%</div>
                       </td>
                       <td>{fmtSpeed(t.download_speed)}</td>
                       <td>{fmtSpeed(t.upload_speed)}</td>
@@ -687,10 +689,10 @@ export default function TorrentManager({ onLogout, onAuthError }) {
         <div className="ds-statusbar">
           {stats ? (
             <>
-              <span>↓ {fmtSpeed(stats.dl_speed)}</span>
-              <span>↑ {fmtSpeed(stats.up_speed)}</span>
-              <span>{stats.total_torrents ?? torrents.length} torrent{(stats.total_torrents ?? torrents.length) !== 1 ? 's' : ''}</span>
-              {stats.free_disk_space != null && <span>Free: {fmtSize(stats.free_disk_space)}</span>}
+              <span>↓ {fmtSpeed(stats.download_speed)}</span>
+              <span>↑ {fmtSpeed(stats.upload_speed)}</span>
+              <span>{stats.count ?? torrents.length} torrent{(stats.count ?? torrents.length) !== 1 ? 's' : ''}</span>
+              {stats.disk_free != null && <span>Free: {fmtSize(stats.disk_free)}</span>}
             </>
           ) : (
             <span style={{ color: 'var(--pf-v5-global--Color--200)' }}>Connecting…</span>
@@ -722,8 +724,8 @@ export default function TorrentManager({ onLogout, onAuthError }) {
                 <div className="ds-ctx-sep" />
                 <div className="ds-ctx-item" onClick={() => { setFileModalTorrent(t); setContextMenu(null); }}>📄 File Priorities</div>
                 <div className="ds-ctx-sep" />
-                <div className="ds-ctx-item danger" onClick={() => { setDeleteTargets([t]); setContextMenu(null); }}>✕ Remove</div>
-                <div className="ds-ctx-item danger" onClick={() => { setDeleteTargets([t]); setContextMenu(null); }}>✕ Remove + Delete Files</div>
+                <div className="ds-ctx-item danger" onClick={() => { setDeleteFilesDefault(false); setDeleteTargets([t]); setContextMenu(null); }}>✕ Remove</div>
+                <div className="ds-ctx-item danger" onClick={() => { setDeleteFilesDefault(true); setDeleteTargets([t]); setContextMenu(null); }}>✕ Remove + Delete Files</div>
               </>
             );
           })()}
@@ -756,8 +758,9 @@ export default function TorrentManager({ onLogout, onAuthError }) {
       {deleteTargets && (
         <DeleteConfirmModal
           torrents={deleteTargets}
+          defaultDeleteFiles={deleteFilesDefault}
           onConfirm={deleteFiles => doDelete(deleteTargets, deleteFiles)}
-          onClose={() => setDeleteTargets(null)}
+          onClose={() => { setDeleteTargets(null); setDeleteFilesDefault(false); }}
         />
       )}
     </div>
