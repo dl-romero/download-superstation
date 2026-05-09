@@ -75,14 +75,22 @@ def _save_auth(username: str, password: str):
                    'password_hash': _hash_pw(password, salt)}, f)
 
 
+# In-memory bearer tokens for API clients (e.g. Cockpit plugin) that
+# cannot access Set-Cookie response headers. Cleared on server restart.
+_api_tokens: dict = {}
+
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            if request.path.startswith('/api/'):
-                return jsonify({'error': 'Unauthorized'}), 401
-            return redirect('/login')
-        return f(*args, **kwargs)
+        if session.get('logged_in'):
+            return f(*args, **kwargs)
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer ') and auth_header[7:] in _api_tokens:
+            return f(*args, **kwargs)
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Unauthorized'}), 401
+        return redirect('/login')
     return decorated
 
 
@@ -112,12 +120,17 @@ def auth_login():
             _hash_pw(body.get('password', ''), auth['salt']) == auth['password_hash']):
         session['logged_in'] = True
         session.permanent = True
-        return jsonify({'ok': True})
+        token = secrets.token_urlsafe(32)
+        _api_tokens[token] = auth['username']
+        return jsonify({'ok': True, 'token': token})
     return jsonify({'error': 'Invalid username or password'}), 401
 
 
 @app.route('/api/auth/logout', methods=['POST'])
 def auth_logout():
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        _api_tokens.pop(auth_header[7:], None)
     session.clear()
     return jsonify({'ok': True})
 
