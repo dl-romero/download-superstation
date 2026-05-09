@@ -311,6 +311,55 @@ The flag installs Node.js if missing (Docker/bare-metal scripts), runs `npm ci &
 | Docker / bare-metal (system) | `/usr/share/cockpit/download-superstation/` |
 | Podman (rootless user) | `~/.local/share/cockpit/download-superstation/` |
 
+### Adding to an existing install
+
+If Download Superstation is already running and you want to add the Cockpit plugin, pull the latest code and re-run your original install script with `--with-cockpit`. Re-running is safe — the scripts are idempotent and will not affect running torrents, downloaded files, or settings.
+
+**Docker (system service)**
+
+```bash
+cd /opt/download-superstation   # or wherever you cloned
+sudo git pull
+sudo bash scripts/install-docker-service.sh --with-cockpit
+```
+
+**Podman (rootless)**
+
+```bash
+cd ~/download-superstation   # or wherever you cloned
+git pull
+bash scripts/install-podman-service.sh --with-cockpit
+```
+
+**Bare metal**
+
+```bash
+cd /opt/torrent-webui   # or wherever you cloned
+sudo git pull
+bash install.sh --with-cockpit
+```
+
+**Docker Compose / `docker run` (no git clone)**
+
+If you deployed via `docker run` or `docker-compose.yml` without cloning the repository, clone it now to get the build tooling — it does not affect your running container:
+
+```bash
+git clone https://github.com/dl-romero/download-superstation.git
+cd download-superstation/cockpit
+npm ci
+npm run build
+
+# System-wide (requires root)
+sudo mkdir -p /usr/share/cockpit/download-superstation
+sudo cp -r dist/. /usr/share/cockpit/download-superstation/
+
+# Per-user (no root)
+mkdir -p ~/.local/share/cockpit/download-superstation
+cp -r dist/. ~/.local/share/cockpit/download-superstation/
+```
+
+After copying, refresh Cockpit in your browser — no service restart needed.
+
 ### Manual install
 
 ```bash
