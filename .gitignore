@@ -8,3 +8,5 @@ meta.json
 settings.json
 auth.json
 secret.key
+cockpit/node_modules/
+cockpit/dist/

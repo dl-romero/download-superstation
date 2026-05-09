@@ -277,6 +277,89 @@ The install script runs `loginctl enable-linger` so the service starts at boot w
 
 ---
 
+## Cockpit Plugin
+
+Download Superstation includes an optional plugin for [Cockpit](https://cockpit-project.org/), the Linux server management web UI. When installed, a **Download Superstation** item appears in Cockpit's navigation menu, giving you full torrent management without opening a separate browser tab.
+
+The plugin communicates with the Download Superstation service running on the same host via `cockpit.http()` (the Cockpit bridge proxy), so no additional firewall ports are needed and CORS is not an issue.
+
+### Requirements
+
+- Cockpit installed and running on the server (`cockpit` package)
+- Download Superstation service running on the same host
+- Node.js (for the one-time build step)
+
+### Automatic install (with service installer)
+
+Pass `--with-cockpit` to any install script:
+
+```bash
+# Docker (system service)
+sudo bash scripts/install-docker-service.sh --with-cockpit
+
+# Podman (rootless)
+bash scripts/install-podman-service.sh --with-cockpit
+
+# Bare metal
+bash install.sh --with-cockpit
+```
+
+The flag installs Node.js if missing (Docker/bare-metal scripts), runs `npm ci && npm run build` in the `cockpit/` directory, and copies the built files to the appropriate Cockpit package path:
+
+| Install type | Cockpit package path |
+|---|---|
+| Docker / bare-metal (system) | `/usr/share/cockpit/download-superstation/` |
+| Podman (rootless user) | `~/.local/share/cockpit/download-superstation/` |
+
+### Manual install
+
+```bash
+cd cockpit
+npm ci
+npm run build
+
+# System-wide (requires root)
+sudo mkdir -p /usr/share/cockpit/download-superstation
+sudo cp -r dist/. /usr/share/cockpit/download-superstation/
+
+# Per-user (no root)
+mkdir -p ~/.local/share/cockpit/download-superstation
+cp -r dist/. ~/.local/share/cockpit/download-superstation/
+```
+
+After copying, refresh Cockpit in your browser (no service restart needed) and the **Download Superstation** item will appear in the left navigation.
+
+### Build from source
+
+```bash
+cd cockpit
+npm ci        # install dependencies
+npm run build # production build to dist/
+npm run watch # development: rebuild on file change
+```
+
+### How it works
+
+- The plugin is a standard Cockpit package — a directory with `manifest.json`, HTML, CSS, and bundled JavaScript served directly by the Cockpit web server.
+- UI is built with React 18 and PatternFly 5 (Cockpit's own UI framework, linked from `../base1/patternfly.css` — no extra download).
+- API calls use `cockpit.http()` (bridge-proxied HTTP to `127.0.0.1:<port>`) so the browser never makes direct requests to the backend — no CORS configuration required.
+- Session cookie authentication is handled transparently: the plugin logs in once and stores the session in `localStorage`, then injects the `Cookie` header on every subsequent request.
+- The service status banner (running / stopped) uses `cockpit.dbus()` to read systemd state in real time and provides one-click Start/Stop.
+- The plugin auto-discovers whichever service name is in use — `download-superstation` (Docker/Podman installs) or `torrent-webui` (legacy bare-metal installs).
+- If the Cockpit plugin condition in `manifest.json` is not met (neither service unit file exists), Cockpit will not show the plugin in the menu.
+
+### Uninstall
+
+```bash
+# System-wide
+sudo rm -rf /usr/share/cockpit/download-superstation
+
+# Per-user
+rm -rf ~/.local/share/cockpit/download-superstation
+```
+
+---
+
 ## Manual Installation (Rocky Linux / bare metal)
 
 ### Requirements

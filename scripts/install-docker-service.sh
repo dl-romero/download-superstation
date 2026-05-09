@@ -1,6 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+COCKPIT=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --with-cockpit) COCKPIT=1 ;;
+  esac
+done
+
 if [ "$EUID" -ne 0 ]; then
     echo "Run as root: sudo bash install-docker-service.sh"
     exit 1
@@ -29,5 +37,26 @@ echo "[install] enabling and starting services..."
 systemctl enable --now download-superstation.service
 systemctl enable --now download-superstation-update.timer
 
+if [ "$COCKPIT" -eq 1 ]; then
+    echo "[install] building and installing Cockpit plugin..."
+
+    if ! command -v node &>/dev/null; then
+        dnf install -y nodejs
+    fi
+
+    COCKPIT_DIR="$REPO_DIR/cockpit"
+    cd "$COCKPIT_DIR"
+    npm ci
+    npm run build
+    cd -
+
+    mkdir -p /usr/share/cockpit/download-superstation
+    cp -r "$COCKPIT_DIR/dist/." /usr/share/cockpit/download-superstation/
+    echo "[install] Cockpit plugin installed to /usr/share/cockpit/download-superstation"
+fi
+
 IP=$(hostname -I | awk '{print $1}')
 echo "[install] done. Web UI: http://${IP}:8080  (default login: admin / admin)"
+if [ "$COCKPIT" -eq 1 ]; then
+    echo "[install] Cockpit plugin: open Cockpit and look for 'Download Superstation' in the menu"
+fi
