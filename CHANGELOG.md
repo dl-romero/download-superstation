@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Cockpit plugin extracted to its own repository: [cockpit-download-superstation](https://github.com/dl-romero/cockpit-download-superstation).
+- `--with-cockpit` flag on all install scripts now clones `cockpit-download-superstation` at install time instead of building from a local `cockpit/` subdirectory. Install path changed from `download-superstation` to `cockpit-download-superstation` under the Cockpit package directory.
+- Removed `cockpit/` directory from this repository.
+
 ### Added
 
 #### Cockpit Plugin

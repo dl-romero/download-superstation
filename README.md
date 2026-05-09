@@ -304,16 +304,16 @@ bash scripts/install-podman-service.sh --with-cockpit
 bash install.sh --with-cockpit
 ```
 
-The flag installs Node.js if missing (Docker/bare-metal scripts), runs `npm ci && npm run build` in the `cockpit/` directory, and copies the built files to the appropriate Cockpit package path:
+The flag installs Node.js if missing (Docker/bare-metal scripts), clones [cockpit-download-superstation](https://github.com/dl-romero/cockpit-download-superstation), builds the plugin, and copies the built files to the appropriate Cockpit package path:
 
 | Install type | Cockpit package path |
 |---|---|
-| Docker / bare-metal (system) | `/usr/share/cockpit/download-superstation/` |
-| Podman (rootless user) | `~/.local/share/cockpit/download-superstation/` |
+| Docker / bare-metal (system) | `/usr/share/cockpit/cockpit-download-superstation/` |
+| Podman (rootless user) | `~/.local/share/cockpit/cockpit-download-superstation/` |
 
 ### Adding to an existing install
 
-If Download Superstation is already running and you want to add the Cockpit plugin, pull the latest code and re-run your original install script with `--with-cockpit`. Re-running is safe — the scripts are idempotent and will not affect running torrents, downloaded files, or settings.
+If Download Superstation is already running and you want to add the Cockpit plugin, re-run your original install script with `--with-cockpit`. The scripts fetch and build the plugin from [cockpit-download-superstation](https://github.com/dl-romero/cockpit-download-superstation) automatically. Re-running is safe and will not affect running torrents, downloaded files, or settings.
 
 **Docker (system service)**
 
@@ -341,39 +341,33 @@ bash install.sh --with-cockpit
 
 **Docker Compose / `docker run` (no git clone)**
 
-If you deployed via `docker run` or `docker-compose.yml` without cloning the repository, clone it now to get the build tooling — it does not affect your running container:
+Clone the Cockpit plugin repository directly — it does not affect your running container:
 
 ```bash
-git clone https://github.com/dl-romero/download-superstation.git
-cd download-superstation/cockpit
-npm ci
-npm run build
-
-# System-wide (requires root)
-sudo mkdir -p /usr/share/cockpit/download-superstation
-sudo cp -r dist/. /usr/share/cockpit/download-superstation/
-
-# Per-user (no root)
-mkdir -p ~/.local/share/cockpit/download-superstation
-cp -r dist/. ~/.local/share/cockpit/download-superstation/
+git clone --depth 1 https://github.com/dl-romero/cockpit-download-superstation.git
+cd cockpit-download-superstation
+sudo bash install.sh        # system-wide
+# or
+bash install.sh --user      # per-user (no root)
 ```
 
-After copying, refresh Cockpit in your browser — no service restart needed.
+After installing, refresh Cockpit in your browser — no service restart needed.
 
 ### Manual install
 
 ```bash
-cd cockpit
+git clone https://github.com/dl-romero/cockpit-download-superstation.git
+cd cockpit-download-superstation
 npm ci
 npm run build
 
 # System-wide (requires root)
-sudo mkdir -p /usr/share/cockpit/download-superstation
-sudo cp -r dist/. /usr/share/cockpit/download-superstation/
+sudo mkdir -p /usr/share/cockpit/cockpit-download-superstation
+sudo cp -r dist/. /usr/share/cockpit/cockpit-download-superstation/
 
 # Per-user (no root)
-mkdir -p ~/.local/share/cockpit/download-superstation
-cp -r dist/. ~/.local/share/cockpit/download-superstation/
+mkdir -p ~/.local/share/cockpit/cockpit-download-superstation
+cp -r dist/. ~/.local/share/cockpit/cockpit-download-superstation/
 ```
 
 After copying, refresh Cockpit in your browser (no service restart needed) and the **Download Superstation** item will appear in the left navigation.
@@ -381,7 +375,8 @@ After copying, refresh Cockpit in your browser (no service restart needed) and t
 ### Build from source
 
 ```bash
-cd cockpit
+git clone https://github.com/dl-romero/cockpit-download-superstation.git
+cd cockpit-download-superstation
 npm ci        # install dependencies
 npm run build # production build to dist/
 npm run watch # development: rebuild on file change
@@ -401,10 +396,10 @@ npm run watch # development: rebuild on file change
 
 ```bash
 # System-wide
-sudo rm -rf /usr/share/cockpit/download-superstation
+sudo rm -rf /usr/share/cockpit/cockpit-download-superstation
 
 # Per-user
-rm -rf ~/.local/share/cockpit/download-superstation
+rm -rf ~/.local/share/cockpit/cockpit-download-superstation
 ```
 
 ---

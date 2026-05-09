@@ -30,15 +30,11 @@ if [ "$COCKPIT" -eq 1 ]; then
     sudo dnf install -y nodejs
   fi
 
-  COCKPIT_DIR="$(cd "$(dirname "$0")" && pwd)/cockpit"
-  cd "$COCKPIT_DIR"
-  npm ci
-  npm run build
-  cd -
-
-  sudo mkdir -p /usr/share/cockpit/download-superstation
-  sudo cp -r "$COCKPIT_DIR/dist/." /usr/share/cockpit/download-superstation/
-  echo "=== Cockpit plugin installed to /usr/share/cockpit/download-superstation ==="
+  _CTMP=$(mktemp -d)
+  git clone --depth 1 https://github.com/dl-romero/cockpit-download-superstation.git "$_CTMP"
+  sudo bash "$_CTMP/install.sh"
+  rm -rf "$_CTMP"
+  echo "=== Cockpit plugin installed to /usr/share/cockpit/cockpit-download-superstation ==="
 fi
 
 echo ""
