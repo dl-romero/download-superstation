@@ -44,10 +44,10 @@ function badgeClass(state) {
   const s = state.toLowerCase();
   if (s === 'downloading') return 'ds-badge dl';
   if (s === 'seeding') return 'ds-badge seed';
-  if (s === 'finished' || s === 'pausedUP' || s === 'stoppedUP') return 'ds-badge done';
+  if (s === 'finished') return 'ds-badge done';
   if (s.includes('paused') || s.includes('stopped')) return 'ds-badge pause';
   if (s.includes('check')) return 'ds-badge check';
-  if (s === 'stalled' || s === 'stalledDL') return 'ds-badge stall';
+  if (s === 'stalled') return 'ds-badge stall';
   if (s === 'queued' || s.includes('queued')) return 'ds-badge meta';
   if (s.includes('metadata')) return 'ds-badge meta';
   if (s === 'error' || s === 'missingfiles') return 'ds-badge err';
@@ -265,10 +265,9 @@ function DetailPanel({ torrent, detail, tab, onTabChange }) {
               <tr><td>ETA</td><td>{fmtEta(torrent.eta)}</td></tr>
               <tr><td>Seeds</td><td>{torrent.seeds ?? '—'}</td></tr>
               <tr><td>Peers</td><td>{torrent.peers ?? '—'}</td></tr>
-              <tr><td>Save Path</td><td style={{ wordBreak: 'break-all' }}>{detail?.save_path ?? torrent.save_path ?? '—'}</td></tr>
-              <tr><td>Added</td><td>{fmtDate(torrent.added_on)}</td></tr>
-              <tr><td>Completed</td><td>{fmtDate(torrent.completion_on)}</td></tr>
-              <tr><td>Hash</td><td style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all' }}>{torrent.hash ?? '—'}</td></tr>
+              <tr><td>Save Path</td><td style={{ wordBreak: 'break-all' }}>{torrent.save_path ?? '—'}</td></tr>
+              <tr><td>Files</td><td>{detail?.general?.num_files ?? '—'}</td></tr>
+              <tr><td>Hash</td><td style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all' }}>{detail?.general?.hash ?? torrent.id ?? '—'}</td></tr>
             </tbody>
           </table>
         )}
@@ -346,8 +345,8 @@ function matchesCategory(t, cat) {
   if (cat === 'all') return true;
   const s = (t.state || '').toLowerCase();
   if (cat === 'downloading') return s === 'downloading' || s === 'stalled' || s.includes('metadata');
-  if (cat === 'seeding')     return s === 'seeding' || s === 'stalledup';
-  if (cat === 'finished')    return s === 'finished' || s === 'pausedup' || s === 'stoppedup';
+  if (cat === 'seeding')     return s === 'seeding';
+  if (cat === 'finished')    return s === 'finished';
   if (cat === 'paused')      return s.includes('paused') || s.includes('stopped');
   if (cat === 'error')       return s === 'error' || s === 'missingfiles';
   return true;

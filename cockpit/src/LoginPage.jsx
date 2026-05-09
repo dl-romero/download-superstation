@@ -14,7 +14,7 @@ export default function LoginPage({ onLogin }) {
     setLoading(true);
 
     const p = parseInt(port) || 8080;
-    if (p !== api.getPort()) { api.setPort(p); api.resetHttp(); }
+    if (p !== api.getPort()) { api.setPort(p); }
 
     try {
       await api.login(username, password);

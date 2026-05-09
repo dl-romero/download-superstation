@@ -236,7 +236,7 @@ export default function SettingsModal({ onClose, onAuthError }) {
 
         <div className="ds-modal-footer">
           <button className="ds-btn" onClick={onClose}>Cancel</button>
-          <button className="ds-btn primary" onClick={handleSave} disabled={saving || loading}>
+          <button className="ds-btn primary" onClick={handleSave} disabled={saving || loading || !settings}>
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>

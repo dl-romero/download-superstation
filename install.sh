@@ -30,7 +30,7 @@ if [ "$COCKPIT" -eq 1 ]; then
     sudo dnf install -y nodejs
   fi
 
-  COCKPIT_DIR="$(dirname "$0")/cockpit"
+  COCKPIT_DIR="$(cd "$(dirname "$0")" && pwd)/cockpit"
   cd "$COCKPIT_DIR"
   npm ci
   npm run build

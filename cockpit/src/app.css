@@ -199,7 +199,7 @@
 
 .ds-table tr { cursor: pointer; }
 .ds-table tr:hover td { background: var(--pf-v5-global--BackgroundColor--200); }
-.ds-table tr.selected td { background: var(--pf-v5-global--active-color--400); }
+.ds-table tr.selected td { background: rgba(0, 102, 204, 0.15); }
 
 .ds-table .td-chk { width: 32px; }
 .ds-table .td-name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -269,7 +269,7 @@
   height: 36px;
 }
 
-.ds-detail-tabs { display: flex; gap: 0; }
+.ds-detail-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100); }
 
 .ds-detail-tab {
   padding: 0 14px;
@@ -324,6 +324,7 @@
 .ds-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ds-detail-table th { padding: 4px 8px; text-align: left; color: var(--pf-v5-global--Color--200); font-weight: 600; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100); }
 .ds-detail-table td { padding: 4px 8px; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100); }
+.ds-detail-table td:first-child { width: 110px; white-space: nowrap; color: var(--pf-v5-global--Color--200); }
 
 /* ── Status bar ──────────────────────────────────────────────────────────── */
 
