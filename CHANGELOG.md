@@ -9,11 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.3.1] — 2026-05-10
+
 ### Added
 
+- `POST /api/torrents` now accepts a `{ file_b64, filename, save_path }` JSON body as an alternative to multipart upload. Used by the Cockpit plugin, which cannot send raw binary through `cockpit.http()` without corruption. The existing multipart path for the standalone web UI is unchanged.
 - `systemd/bare-metal-user-download-superstation.service` — systemd user service unit for bare-metal installs; runs as a user service in `~/download-superstation` with no root required.
 - `systemd/bare-metal-user-download-superstation-update.service` and `.timer` — daily auto-update timer for bare-metal user installs.
 - `scripts/bare-metal-user-update.sh` — update script for bare-metal user installs; fetches latest from git, syncs pip dependencies, and restarts the user service.
+
+### Changed
+
+- `install.sh` no longer requires C extension build tools (`python3-devel`, `gcc-c++`, `boost-devel`, `openssl-devel`). `libtorrent` now installs from a pre-built manylinux wheel on PyPI.
+- `install.sh` gained a `--with-cockpit-user` flag for per-user Cockpit plugin install (no root required).
 
 ---
 
