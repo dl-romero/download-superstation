@@ -16,9 +16,12 @@ ExecStart=/usr/bin/docker run --rm \
     -p 6881:6881/udp \
     -v /opt/download-superstation/downloads:/downloads \
     -v /opt/download-superstation/data:/data \
+    -v /home/admin/.download-superstation:/cockpit-auth \
     -e DOWNLOAD_PATH=/downloads \
     -e DATA_PATH=/data \
     -e PORT=8080 \
+    -e COCKPIT_PORT=8080 \
+    -e COCKPIT_AUTH_PATH=/cockpit-auth \
     ghcr.io/dl-romero/download-superstation:latest
 ExecReload=/usr/bin/docker restart download-superstation
 ExecStop=/usr/bin/docker stop download-superstation

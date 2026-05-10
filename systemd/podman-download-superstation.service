@@ -18,9 +18,12 @@ ExecStart=/usr/bin/podman run --rm --userns=keep-id \
     -p 6881:6881/udp \
     -v %h/download-superstation/downloads:/downloads:Z \
     -v %h/download-superstation/data:/data:Z \
+    -v %h/.download-superstation:/cockpit-auth:z \
     -e DOWNLOAD_PATH=/downloads \
     -e DATA_PATH=/data \
     -e PORT=8080 \
+    -e COCKPIT_PORT=8080 \
+    -e COCKPIT_AUTH_PATH=/cockpit-auth \
     ghcr.io/dl-romero/download-superstation:latest
 ExecReload=/usr/bin/podman restart download-superstation
 ExecStop=/usr/bin/podman stop download-superstation

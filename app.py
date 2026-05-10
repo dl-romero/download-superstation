@@ -14,10 +14,17 @@ from flask import (Flask, jsonify, redirect, render_template,
                    request, session)
 from torrent_manager import TorrentManager
 
-DOWNLOAD_PATH = os.environ.get('DOWNLOAD_PATH', str(Path.home() / 'Downloads' / 'torrents'))
-DATA_PATH     = os.environ.get('DATA_PATH',     str(Path.home() / '.download-superstation'))
-HOST          = os.environ.get('HOST', '0.0.0.0')
-PORT          = int(os.environ.get('PORT', 8080))
+DOWNLOAD_PATH     = os.environ.get('DOWNLOAD_PATH',     str(Path.home() / 'Downloads' / 'torrents'))
+DATA_PATH         = os.environ.get('DATA_PATH',         str(Path.home() / '.download-superstation'))
+HOST              = os.environ.get('HOST',              '0.0.0.0')
+PORT              = int(os.environ.get('PORT',          8080))
+# COCKPIT_PORT: the host-side port cockpit.http() connects to. Set this when
+# the container's internal PORT differs from the mapped host port (e.g. -p 5005:8080).
+COCKPIT_PORT      = int(os.environ.get('COCKPIT_PORT',  PORT))
+# COCKPIT_AUTH_PATH: directory where the Cockpit bearer-token key file is written.
+# For containers, mount a host-readable volume here so cockpit-bridge can read it.
+# Defaults to DATA_PATH (works for bare-metal installs with no extra config).
+COCKPIT_AUTH_PATH = os.environ.get('COCKPIT_AUTH_PATH', DATA_PATH)
 
 app = Flask(__name__)
 app.permanent_session_lifetime = timedelta(days=30)
@@ -33,14 +40,16 @@ else:
 
 manager = TorrentManager(DOWNLOAD_PATH, DATA_PATH)
 
-# Cockpit plugin auth: stable key file readable only by the service user.
-# The plugin reads this via cockpit.file() (gated by Cockpit's own auth).
-_cockpit_key_file = Path(DATA_PATH) / 'cockpit-api-key'
+# Cockpit plugin auth: write a bearer-token + port file so the plugin can
+# auto-detect the service without manual configuration.
+# COCKPIT_AUTH_PATH should point to a host-readable directory (see env vars above).
+Path(COCKPIT_AUTH_PATH).mkdir(parents=True, exist_ok=True)
+_cockpit_key_file = Path(COCKPIT_AUTH_PATH) / 'cockpit-api-key'
 if _cockpit_key_file.exists():
     _cockpit_api_key = json.loads(_cockpit_key_file.read_text())['key']
 else:
     _cockpit_api_key = secrets.token_urlsafe(32)
-    _cockpit_key_file.write_text(json.dumps({'key': _cockpit_api_key, 'port': PORT}))
+    _cockpit_key_file.write_text(json.dumps({'key': _cockpit_api_key, 'port': COCKPIT_PORT}))
     _cockpit_key_file.chmod(0o600)
 
 try:
@@ -90,10 +99,15 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if session.get('logged_in'):
             return f(*args, **kwargs)
-        # cockpit.http() goes through cockpit-bridge on the server, so it
-        # always originates from loopback. Trust it — Cockpit's own auth
-        # already verified the user.
+        # cockpit.http() routes through cockpit-bridge on the server, so it
+        # always arrives from loopback. Trust it — Cockpit's own auth already
+        # verified the user.
         if request.remote_addr in ('127.0.0.1', '::1'):
+            return f(*args, **kwargs)
+        # Cockpit plugin may also send a bearer token read from the key file
+        # via cockpit.file() (gated by Cockpit's own auth).
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer ') and auth_header[7:] == _cockpit_api_key:
             return f(*args, **kwargs)
         if request.path.startswith('/api/'):
             return jsonify({'error': 'Unauthorized'}), 401
@@ -352,8 +366,10 @@ def trigger_update():
 if __name__ == '__main__':
     auth = _load_auth()
     print('[app] Download Superstation')
-    print(f'[app] download path : {DOWNLOAD_PATH}')
-    print(f'[app] data path     : {DATA_PATH}')
-    print(f'[app] listening on  : http://{HOST}:{PORT}')
-    print(f'[app] username      : {auth["username"]}')
+    print(f'[app] download path    : {DOWNLOAD_PATH}')
+    print(f'[app] data path        : {DATA_PATH}')
+    print(f'[app] cockpit auth path: {COCKPIT_AUTH_PATH}')
+    print(f'[app] listening on     : http://{HOST}:{PORT}')
+    print(f'[app] cockpit port     : {COCKPIT_PORT}')
+    print(f'[app] username         : {auth["username"]}')
     app.run(host=HOST, port=PORT, debug=False, threaded=True)

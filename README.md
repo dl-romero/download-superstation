@@ -152,7 +152,9 @@ All configuration is done via environment variables passed to the container.
 | `DOWNLOAD_PATH` | `/downloads` | Where new torrents are saved |
 | `DATA_PATH` | `/data` | Where state and credentials are stored |
 | `HOST` | `0.0.0.0` | Interface to bind to |
-| `PORT` | `8080` | Web UI port |
+| `PORT` | `8080` | Web UI port (internal container port) |
+| `COCKPIT_PORT` | same as `PORT` | Host-side port for the Cockpit plugin. Set this when the host port differs from `PORT` (e.g. `-p 5005:8080` → `COCKPIT_PORT=5005`). |
+| `COCKPIT_AUTH_PATH` | same as `DATA_PATH` | Directory where the Cockpit bearer-token key file is written. Mount a host-readable volume here so `cockpit-bridge` can read it (see Cockpit Plugin section). |
 
 Example with custom port:
 
@@ -387,10 +389,10 @@ npm run watch # development: rebuild on file change
 - The plugin is a standard Cockpit package — a directory with `manifest.json`, HTML, CSS, and bundled JavaScript served directly by the Cockpit web server.
 - UI is built with React 18 and PatternFly 5 (Cockpit's own UI framework, linked from `../base1/patternfly.css` — no extra download).
 - API calls use `cockpit.http()` (bridge-proxied HTTP to `127.0.0.1:<port>`) so the browser never makes direct requests to the backend — no CORS configuration required.
-- Session cookie authentication is handled transparently: the plugin logs in once and stores the session in `localStorage`, then injects the `Cookie` header on every subsequent request.
-- The service status banner (running / stopped) uses `cockpit.dbus()` to read systemd state in real time and provides one-click Start/Stop.
+- Authentication uses a stable bearer token written by the service to `cockpit-api-key` at startup. The plugin reads this file via `cockpit.spawn(['cat', path])` to auto-detect the port and token — no manual configuration needed.
+- For bare-metal installs, `cockpit-bridge` connects from `127.0.0.1` which the service trusts natively, so the bearer token is an optional extra layer.
+- The service status banner uses `cockpit.spawn(['systemctl', '--user', 'show', ...])` to read state in real time and provides one-click Start/Stop.
 - The plugin auto-discovers whichever service name is in use — `download-superstation` (Docker/Podman installs) or `torrent-webui` (legacy bare-metal installs).
-- If the Cockpit plugin condition in `manifest.json` is not met (neither service unit file exists), Cockpit will not show the plugin in the menu.
 
 ### Uninstall
 
