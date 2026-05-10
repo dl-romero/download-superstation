@@ -1,0 +1,8 @@
+[Unit]
+Description=Download Superstation update check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/download-superstation/scripts/bare-metal-user-update.sh

@@ -1,0 +1,17 @@
+[Unit]
+Description=Download Superstation
+Documentation=https://github.com/dl-romero/download-superstation
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/download-superstation
+Environment=PORT=8080
+Environment=HOST=0.0.0.0
+ExecStart=%h/download-superstation/venv/bin/python %h/download-superstation/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
