@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -215,7 +216,20 @@ def update_settings():
 @app.route('/api/torrents', methods=['POST'])
 @login_required
 def add_torrent():
-    save_path = request.form.get('save_path') or (request.get_json(silent=True) or {}).get('save_path')
+    body = request.get_json(silent=True) or {}
+    save_path = request.form.get('save_path') or body.get('save_path') or None
+
+    # Base64-encoded .torrent file — used by the Cockpit plugin, which cannot
+    # send raw binary through cockpit.http() without corruption.
+    if 'file_b64' in body:
+        filename = body.get('filename', '')
+        if not filename.endswith('.torrent'):
+            return jsonify({'error': 'File must be a .torrent file'}), 400
+        try:
+            file_bytes = base64.b64decode(body['file_b64'])
+            return jsonify({'id': manager.add_torrent_file(file_bytes, save_path)})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
 
     if request.content_type and 'multipart' in request.content_type:
         file = request.files.get('file')
@@ -228,7 +242,6 @@ def add_torrent():
         except Exception as e:
             return jsonify({'error': str(e)}), 400
 
-    body = request.get_json(silent=True) or {}
     magnet = body.get('magnet', '').strip()
     if not magnet:
         return jsonify({'error': 'No magnet link or file provided'}), 400
