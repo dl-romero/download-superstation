@@ -9,56 +9,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- Cockpit plugin extracted to its own repository: [cockpit-download-superstation](https://github.com/dl-romero/cockpit-download-superstation).
-- `--with-cockpit` flag on all install scripts now clones `cockpit-download-superstation` at install time instead of building from a local `cockpit/` subdirectory. Install path changed from `download-superstation` to `cockpit-download-superstation` under the Cockpit package directory.
-- Removed `cockpit/` directory from this repository.
+- `systemd/bare-metal-user-download-superstation.service` — systemd user service unit for bare-metal installs; runs as a user service in `~/download-superstation` with no root required.
+- `systemd/bare-metal-user-download-superstation-update.service` and `.timer` — daily auto-update timer for bare-metal user installs.
+- `scripts/bare-metal-user-update.sh` — update script for bare-metal user installs; fetches latest from git, syncs pip dependencies, and restarts the user service.
+
+---
+
+## [1.3.0] — 2026-05-09
 
 ### Added
 
-#### Cockpit Plugin
+- **Cockpit plugin support** — the backend now writes a bearer-token key file at startup so the [cockpit-download-superstation](https://github.com/dl-romero/cockpit-download-superstation) plugin can authenticate without a login prompt.
+  - `cockpit-api-key` JSON file written to `COCKPIT_AUTH_PATH` on first run containing the bearer token and host-side port. All API requests from the Cockpit plugin are validated against this token.
+  - `COCKPIT_PORT` environment variable — records the host-side port that `cockpit.http()` should connect to. Set this when the container's internal port differs from the mapped host port (e.g. `-p 5005:8080` → `COCKPIT_PORT=5005`).
+  - `COCKPIT_AUTH_PATH` environment variable — directory where `cockpit-api-key` is written. For container installs, mount a host-readable volume here (e.g. `-v ~/.download-superstation:/cockpit-auth:z -e COCKPIT_AUTH_PATH=/cockpit-auth`) so `cockpit-bridge` can read the file without entering the container.
+- Startup log now prints `cockpit auth path` and `cockpit port` alongside the existing download and data paths.
 
-- New `cockpit/` directory containing a full [Cockpit](https://cockpit-project.org/) package for Download Superstation.
-- React 18 + PatternFly 5 UI that mirrors the standalone web UI — same features, same layout, embedded directly in Cockpit's navigation.
-- `manifest.json` — Cockpit package descriptor; plugin only appears when the Download Superstation or Torrent WebUI systemd unit file is present on the host.
-- `src/App.jsx` — auth state machine (`loading → authenticated → unauthenticated`) with silent session probe on startup.
-- `src/LoginPage.jsx` — sign-in card with username, password, and configurable service port fields.
-- `src/TorrentManager.jsx` — main page component:
-  - Sidebar navigation with live per-category torrent counts (All, Downloading, Seeding, Finished, Paused, Error).
-  - Toolbar with Add, Resume, Pause, and Remove buttons; multi-select aware (buttons disable when irrelevant).
-  - Sortable table with columns: name, priority, size, state, progress, download speed, upload speed, ratio, ETA.
-  - Row click for single selection and side detail panel; Ctrl/Cmd+click for multi-select.
-  - Right-click context menu: resume/pause, priority (high/normal/low), file priorities, remove.
-  - Side detail panel (General / Peers / Trackers tabs) with live data updated every poll cycle.
-  - File priority modal with per-file dropdowns and bulk-set buttons (All High, All Normal, All Low, Skip All).
-  - Delete confirmation modal with optional "also delete files" checkbox.
-  - Status bar showing aggregate download/upload speed, torrent count, and free disk space.
-  - 2-second polling loop that pauses automatically when the Cockpit tab is hidden (`cockpit.visibilitychange`).
-- `src/ServiceStatus.jsx` — real-time systemd service banner via `cockpit.dbus('org.freedesktop.systemd1')`:
-  - Probes both `download-superstation` and `torrent-webui` service names automatically.
-  - Shows running/stopped/unknown state with coloured dot and live sub-state.
-  - One-click Start/Stop with `superuser: 'require'` escalation.
-- `src/AddModal.jsx` — add-torrent modal with Torrent File (drag-and-drop) and Magnet Link tabs; optional per-torrent save path.
-- `src/SettingsModal.jsx` — settings modal with sections: Storage, Speed Limits, Active Torrent Limits, Seeding Limits, Security (change password), About (version + update check), Cockpit Plugin (service port).
-- `src/api.js` — all API calls via `cockpit.http()` (bridge proxy to `127.0.0.1:<port>`):
-  - Session cookie auth: captures `Set-Cookie` from login response, stores in `localStorage`, injects as `Cookie` header.
-  - Multipart file upload constructed as `Uint8Array` (no browser `FormData`) for Cockpit bridge compatibility.
-  - Configurable service port stored in `localStorage`; live port changes close and recreate the HTTP client.
-- `src/app.css` — ~500 lines of custom CSS using PatternFly 5 CSS variables for full dark/light theme support.
-- `build.js` — esbuild build script: ESM format, `cockpit` marked external (resolved via importmap), font/SVG loaders, optional `--watch` flag.
-- `package.json` — build dependencies: React 18, PatternFly 5 React components and icons, esbuild.
+### Changed
 
-#### Install scripts
+- Cockpit plugin extracted to its own repository: [cockpit-download-superstation](https://github.com/dl-romero/cockpit-download-superstation). The `cockpit/` subdirectory has been removed from this repo.
+- `login_required` decorator now trusts requests arriving from loopback (`127.0.0.1` / `::1`) without requiring a session cookie or bearer token. This covers bare-metal installs where `cockpit-bridge` connects directly on the same host.
+- Systemd unit templates (Podman and Docker) updated to mount `~/.download-superstation` into the container and pass `COCKPIT_AUTH_PATH` and `COCKPIT_PORT` so the Cockpit plugin works out of the box.
 
-- `install.sh` — added `--with-cockpit` flag: installs Node.js if needed, builds the plugin, copies `dist/` to `/usr/share/cockpit/download-superstation/`.
-- `scripts/install-docker-service.sh` — added `--with-cockpit` flag with same behaviour (system-wide install path).
-- `scripts/install-podman-service.sh` — added `--with-cockpit` flag; installs to per-user path `~/.local/share/cockpit/download-superstation/` (no root required).
+### Fixed
 
-#### Documentation
+- `login_required` was rejecting Cockpit plugin requests on bare-metal installs because `cockpit-bridge` always connects from the loopback address — now correctly trusted.
 
-- `README.md` — added comprehensive **Cockpit Plugin** section covering: requirements, automatic install via `--with-cockpit`, manual install, build-from-source, architecture notes, and uninstall instructions.
-- `CHANGELOG.md` — this file.
+---
+
+## [1.2.1] — 2025-12-14
+
+### Fixed
+
+- In-app update (`/api/update`) now uses `git reset --hard origin/main` instead of `git pull` to handle dirty working trees cleanly.
+
+---
+
+## [1.2.0] — 2025-12-13
+
+### Added
+
+- Ratio progress bar in the Progress column with colour coding toward the 1:1 seeding target.
+
+### Changed
+
+- Flask server runs in threaded mode to prevent request queuing when multiple clients poll simultaneously.
+
+---
+
+## [1.1.0] — 2025-12-09
+
+### Added
+
+- About modal with author, website, and repository links.
+- Manual update trigger button in the About modal — checks for a newer git commit and applies it in-place with a service restart.
+- Systemd service units for Docker (system service) and Podman (rootless user service), each with a daily auto-update timer.
+- `scripts/install-docker-service.sh` and `scripts/install-podman-service.sh` — one-step service setup scripts for Rocky Linux.
+- `install.sh` — bare-metal venv installer for Rocky Linux.
+- `run.sh` — development run script.
+- `--userns=keep-id` added to the Podman unit so rootless volume permissions work correctly.
+
+### Fixed
+
+- State label array was off-by-one, causing torrents to display the wrong status string.
+- Update button in About modal was calling `.json()` on an already-parsed response.
+- Settings modal footer was hidden on short viewports; modal height capped and body made scrollable.
+- Login page now centers vertically and horizontally.
+- `install.sh` branding corrected to Download Superstation.
+
+### Changed
+
+- UI and startup output rebranded from Torrent WebUI to Download Superstation.
+- Password reset instructions added to README and login page.
 
 ---
 
