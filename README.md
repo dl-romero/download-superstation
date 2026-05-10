@@ -92,14 +92,14 @@ Images are published to the GitHub Container Registry at `ghcr.io/dl-romero/down
 | Tag | Description |
 |---|---|
 | `latest` | Most recent build from `main` |
-| `1.0`, `1.0.0` | Specific release versions |
+| `1.3`, `1.3.0` | Specific release versions |
 
 ```bash
 # Latest
 docker pull ghcr.io/dl-romero/download-superstation:latest
 
 # Specific version
-docker pull ghcr.io/dl-romero/download-superstation:1.0.0
+docker pull ghcr.io/dl-romero/download-superstation:1.3.0
 ```
 
 ---
@@ -336,9 +336,10 @@ bash scripts/install-podman-service.sh --with-cockpit
 **Bare metal**
 
 ```bash
-cd /opt/torrent-webui   # or wherever you cloned
-sudo git pull
-bash install.sh --with-cockpit
+cd ~/download-superstation   # or wherever you cloned
+git pull
+bash install.sh --with-cockpit-user   # per-user Cockpit install (no root)
+# or: bash install.sh --with-cockpit  # system-wide (requires root)
 ```
 
 **Docker Compose / `docker run` (no git clone)**
@@ -406,32 +407,26 @@ rm -rf ~/.local/share/cockpit/cockpit-download-superstation
 
 ---
 
-## Manual Installation (Rocky Linux / bare metal)
+## Bare-Metal Installation
 
 ### Requirements
 
-- Python 3.10+
-- Rocky Linux 8/9 (x86_64 / AMD64)
+- Python 3.10+ (with `pip`)
+- Any Linux distribution (x86_64)
 
-### 1. Clone the repository
+No C extension build tools are required — `libtorrent` installs from a pre-built manylinux wheel.
 
-```bash
-git clone https://github.com/dl-romero/download-superstation.git
-cd download-superstation
-```
-
-### 2. Run the installer
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/dl-romero/download-superstation.git ~/download-superstation
+cd ~/download-superstation
 bash install.sh
 ```
 
-This will:
-- Install system dependencies via `dnf` (`python3-devel`, `gcc-c++`, `boost-devel`, `openssl-devel`)
-- Create a Python virtual environment at `./venv`
-- Install `Flask` and `libtorrent` into the venv
+This creates a Python virtual environment at `./venv` and installs all dependencies into it.
 
-### 3. Start the server
+### 2. Start the server
 
 ```bash
 bash run.sh
@@ -451,8 +446,10 @@ All configuration is done via environment variables, both for Docker and bare-me
 | `DATA_PATH` | `~/.download-superstation` | Where state files are stored |
 | `HOST` | `0.0.0.0` | Interface to bind to |
 | `PORT` | `8080` | Port to listen on |
+| `COCKPIT_PORT` | same as `PORT` | Host-side port for the Cockpit plugin. Set this when the host port differs from `PORT` (e.g. `-p 5005:8080` → `COCKPIT_PORT=5005`). Bare-metal installs do not need this. |
+| `COCKPIT_AUTH_PATH` | same as `DATA_PATH` | Directory where `cockpit-api-key` is written. Container installs should mount a host-readable volume here. Bare-metal installs do not need this. |
 
-**Example — custom paths and port (bare metal):**
+**Example — custom paths and port:**
 
 ```bash
 DOWNLOAD_PATH=/mnt/storage/torrents DATA_PATH=/opt/torrent-data PORT=9090 bash run.sh
@@ -460,50 +457,64 @@ DOWNLOAD_PATH=/mnt/storage/torrents DATA_PATH=/opt/torrent-data PORT=9090 bash r
 
 ---
 
-## Running as a systemd Service (bare metal)
+## Running as a Systemd User Service (bare metal)
 
-**Install via `git clone`** so the auto-updater can pull changes later:
+Running as a systemd **user** service requires no root and starts automatically on login or boot (with linger enabled).
+
+**Install via `git clone`** to `~/download-superstation` so the auto-updater can pull changes:
 
 ```bash
-sudo git clone https://github.com/dl-romero/download-superstation.git /opt/torrent-webui
-cd /opt/torrent-webui && sudo bash install.sh
+git clone https://github.com/dl-romero/download-superstation.git ~/download-superstation
+cd ~/download-superstation
+bash install.sh
 
 # Install the service and auto-update timer
-sudo cp torrent-webui.service /etc/systemd/system/
-sudo cp systemd/bare-metal-download-superstation-update.service /etc/systemd/system/download-superstation-update.service
-sudo cp systemd/bare-metal-download-superstation-update.timer   /etc/systemd/system/download-superstation-update.timer
-sudo cp scripts/bare-metal-update.sh /opt/torrent-webui/scripts/bare-metal-update.sh
-sudo chmod +x /opt/torrent-webui/scripts/bare-metal-update.sh
+cp systemd/bare-metal-user-download-superstation.service \
+   ~/.config/systemd/user/download-superstation.service
+cp systemd/bare-metal-user-download-superstation-update.service \
+   ~/.config/systemd/user/download-superstation-update.service
+cp systemd/bare-metal-user-download-superstation-update.timer \
+   ~/.config/systemd/user/download-superstation-update.timer
 
-sudo systemctl daemon-reload
-sudo systemctl enable --now torrent-webui
-sudo systemctl enable --now download-superstation-update.timer
+systemctl --user daemon-reload
+systemctl --user enable --now download-superstation
+systemctl --user enable --now download-superstation-update.timer
+
+# Optional: start the service at boot without requiring a login session
+loginctl enable-linger
 ```
 
-The timer runs the updater daily at 4 AM. It pulls the latest commit, syncs any new Python dependencies, and restarts the service only when something actually changed.
+The timer runs the updater daily at 4 AM. It pulls the latest commit, syncs any new Python dependencies, and restarts the service only when something changed.
+
+Common operations:
+
+```bash
+systemctl --user status download-superstation
+systemctl --user restart download-superstation
+journalctl --user -fu download-superstation    # follow logs
+```
 
 Trigger a manual update at any time:
 
 ```bash
-sudo systemctl start download-superstation-update.service
+systemctl --user start download-superstation-update.service
 # or directly:
-sudo bash /opt/torrent-webui/scripts/bare-metal-update.sh
+bash ~/download-superstation/scripts/bare-metal-user-update.sh
 ```
 
-Edit `/etc/systemd/system/torrent-webui.service` to customise the user, port, or paths:
+To customise the port or paths, create a drop-in override:
+
+```bash
+systemctl --user edit download-superstation
+```
+
+Add the variables you want to change:
 
 ```ini
 [Service]
-User=youruser
-Environment=PORT=8080
+Environment=PORT=9090
 Environment=DOWNLOAD_PATH=/mnt/storage/torrents
-Environment=DATA_PATH=/home/youruser/.torrent-webui
-```
-
-After editing:
-
-```bash
-sudo systemctl daemon-reload && sudo systemctl restart torrent-webui
+Environment=DATA_PATH=/home/youruser/.download-superstation
 ```
 
 ---
@@ -536,7 +547,7 @@ systemctl --user restart download-superstation
 **Bare metal:**
 ```bash
 rm ~/.download-superstation/auth.json
-sudo systemctl restart torrent-webui
+systemctl --user restart download-superstation
 ```
 
 Change the password again immediately after logging back in.

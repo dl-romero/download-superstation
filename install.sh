@@ -2,19 +2,24 @@
 set -e
 
 COCKPIT=0
+COCKPIT_USER=0
 
 for arg in "$@"; do
   case "$arg" in
-    --with-cockpit) COCKPIT=1 ;;
+    --with-cockpit)      COCKPIT=1 ;;
+    --with-cockpit-user) COCKPIT=1; COCKPIT_USER=1 ;;
   esac
 done
 
-echo "=== Download Superstation installer (Rocky Linux / x86_64) ==="
+echo "=== Download Superstation installer ==="
 
-# System deps (libtorrent has a C extension that needs these)
-sudo dnf install -y python3 python3-pip python3-devel gcc-c++ boost-devel openssl-devel
+if ! command -v python3 &>/dev/null; then
+  echo "python3 not found. Install it first (e.g. sudo dnf install -y python3 python3-pip)"
+  exit 1
+fi
 
-# Create venv
+# Create venv and install dependencies.
+# libtorrent ships a manylinux wheel on PyPI — no C extension build tools required.
 python3 -m venv venv
 source venv/bin/activate
 
@@ -25,16 +30,21 @@ if [ "$COCKPIT" -eq 1 ]; then
   echo ""
   echo "=== Installing Cockpit plugin ==="
 
-  # Install Node.js if not present
   if ! command -v node &>/dev/null; then
-    sudo dnf install -y nodejs
+    echo "Node.js not found. Install it first (e.g. sudo dnf install -y nodejs)"
+    exit 1
   fi
 
   _CTMP=$(mktemp -d)
   git clone --depth 1 https://github.com/dl-romero/cockpit-download-superstation.git "$_CTMP"
-  sudo bash "$_CTMP/install.sh"
+  if [ "$COCKPIT_USER" -eq 1 ]; then
+    bash "$_CTMP/install.sh" --user
+    echo "=== Cockpit plugin installed to ~/.local/share/cockpit/cockpit-download-superstation ==="
+  else
+    sudo bash "$_CTMP/install.sh"
+    echo "=== Cockpit plugin installed to /usr/share/cockpit/cockpit-download-superstation ==="
+  fi
   rm -rf "$_CTMP"
-  echo "=== Cockpit plugin installed to /usr/share/cockpit/cockpit-download-superstation ==="
 fi
 
 echo ""
