@@ -33,6 +33,16 @@ else:
 
 manager = TorrentManager(DOWNLOAD_PATH, DATA_PATH)
 
+# Cockpit plugin auth: stable key file readable only by the service user.
+# The plugin reads this via cockpit.file() (gated by Cockpit's own auth).
+_cockpit_key_file = Path(DATA_PATH) / 'cockpit-api-key'
+if _cockpit_key_file.exists():
+    _cockpit_api_key = json.loads(_cockpit_key_file.read_text())['key']
+else:
+    _cockpit_api_key = secrets.token_urlsafe(32)
+    _cockpit_key_file.write_text(json.dumps({'key': _cockpit_api_key, 'port': PORT}))
+    _cockpit_key_file.chmod(0o600)
+
 try:
     _GIT_HASH = subprocess.check_output(
         ['git', 'rev-parse', '--short', 'HEAD'], cwd=Path(__file__).parent
@@ -75,18 +85,13 @@ def _save_auth(username: str, password: str):
                    'password_hash': _hash_pw(password, salt)}, f)
 
 
-# In-memory bearer tokens for API clients (e.g. Cockpit plugin) that
-# cannot access Set-Cookie response headers. Cleared on server restart.
-_api_tokens: dict = {}
-
-
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if session.get('logged_in'):
             return f(*args, **kwargs)
         auth_header = request.headers.get('Authorization', '')
-        if auth_header.startswith('Bearer ') and auth_header[7:] in _api_tokens:
+        if auth_header.startswith('Bearer ') and auth_header[7:] == _cockpit_api_key:
             return f(*args, **kwargs)
         if request.path.startswith('/api/'):
             return jsonify({'error': 'Unauthorized'}), 401
@@ -120,17 +125,12 @@ def auth_login():
             _hash_pw(body.get('password', ''), auth['salt']) == auth['password_hash']):
         session['logged_in'] = True
         session.permanent = True
-        token = secrets.token_urlsafe(32)
-        _api_tokens[token] = auth['username']
-        return jsonify({'ok': True, 'token': token})
+        return jsonify({'ok': True})
     return jsonify({'error': 'Invalid username or password'}), 401
 
 
 @app.route('/api/auth/logout', methods=['POST'])
 def auth_logout():
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Bearer '):
-        _api_tokens.pop(auth_header[7:], None)
     session.clear()
     return jsonify({'ok': True})
 
