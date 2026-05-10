@@ -90,8 +90,10 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if session.get('logged_in'):
             return f(*args, **kwargs)
-        auth_header = request.headers.get('Authorization', '')
-        if auth_header.startswith('Bearer ') and auth_header[7:] == _cockpit_api_key:
+        # cockpit.http() goes through cockpit-bridge on the server, so it
+        # always originates from loopback. Trust it — Cockpit's own auth
+        # already verified the user.
+        if request.remote_addr in ('127.0.0.1', '::1'):
             return f(*args, **kwargs)
         if request.path.startswith('/api/'):
             return jsonify({'error': 'Unauthorized'}), 401
